@@ -15,6 +15,65 @@ from vnpy.trader.database import (
     convert_tz
 )
 
+script = """
+    barPath = "dfs://vnpy_bar"
+    if((existsDatabase(barPath).not())){
+        bar_exchange = database(, VALUE, ["vnpy"])
+        bar_symbol = database(, VALUE, ["vnpy"])
+        bar_interval = database(, VALUE, ["vnpy"])
+        db_bar = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval], engine=`TSDB)
+        bar_t = table(100:100,
+                     `symbol`exchange`datetime`interval`volume`open_interest`open_price`high_price`low_price`close_price,
+                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+        db_bar.createPartitionedTable(bar_t,
+                                      `bar,
+                                      partitionColumns=["exchange", "symbol", "interval"],
+                                      sortColumns=["symbol","datetime"],
+                                      keepDuplicates=LAST)
+    }
+
+    tickPath = "dfs://vnpy_tick"
+    if((existsDatabase(tickPath).not())){
+        tick_exchange = database(, VALUE, ["vnpy"])
+        tick_symbol = database(, VALUE, ["vnpy"])
+        db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
+        tick_t = table(100:100,
+                       `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
+                       `open_price`high_price`low_price`pre_close\
+                       `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
+                       `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
+                       `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
+                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,
+                       [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+        db_tick.createPartitionedTable(tick_t,
+                                       `tick,
+                                       partitionColumns=["exchange", "symbol"],
+                                       sortColumns=["symbol","datetime"],
+                                       keepDuplicates=LAST)
+    }
+
+    overviewPath = "dfs://vnpy_overview"
+    if((existsDatabase(overviewPath).not())){
+        overview_exchange = database(, VALUE, ["vnpy"])
+        overview_symbol = database(, VALUE, ["vnpy"])
+        overview_interval = database(, VALUE, ["vnpy"])
+        db_overview = database(overviewPath, COMPO, [overview_exchange, overview_symbol, overview_interval], engine=`TSDB)
+        overview_t = table(100:100,
+                           `symbol`exchange`interval`count`start`end,
+                           [SYMBOL,SYMBOL,SYMBOL,INT,NANOTIMESTAMP,NANOTIMESTAMP])
+        db_overview.createPartitionedTable(overview_t,
+                                           `overview,
+                                           partitionColumns=["exchange", "symbol", "interval"],
+                                           sortColumns=["symbol","start"],
+                                           keepDuplicates=LAST)
+    }
+"""
+
 
 class DolphindbDatabase(BaseDatabase):
     """"""
@@ -29,47 +88,6 @@ class DolphindbDatabase(BaseDatabase):
         # 连接池用于多线程并发写入
         self.pool = ddb.DBConnectionPool("localhost", 8848, 20, "admin", "123456")
         # dolphindb初始化脚本，用于在第一次时创建数据库和表结构
-        script = '''
-                barPath = "dfs://vnpy_bar"
-                if((existsDatabase(barPath).not())){
-                    bar_exchange = database(, VALUE, ["vnpy"])
-                    bar_symbol = database(, VALUE, ["vnpy"])
-                    bar_interval = database(, VALUE, ["vnpy"])
-                    db_bar = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval],engine=`TSDB)
-                    bar_t = table(100:100,`symbol`exchange`datetime`interval`volume`open_interest`open_price`high_price`low_price`close_price,[SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
-                    db_bar.createPartitionedTable(bar_t, `bar, partitionColumns=["exchange", "symbol", "interval"], sortColumns=["symbol","datetime"], keepDuplicates=LAST)
-                }
-
-                tickPath = "dfs://vnpy_tick"
-                if((existsDatabase(tickPath).not())){
-                    tick_exchange = database(, VALUE, ["vnpy"])
-                    tick_symbol = database(, VALUE, ["vnpy"])
-                    db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol],engine=`TSDB)
-                    tick_t = table(100:100,`symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                                            `open_price`high_price`low_price`pre_close\
-                                            `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
-                                            `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
-                                            `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
-                                            `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,\
-                                            [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                                            DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                                            DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                                            DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                                            DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                                            DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
-                    db_tick.createPartitionedTable(tick_t, `tick, partitionColumns=["exchange", "symbol"], sortColumns=["symbol","datetime"], keepDuplicates=LAST)
-                }
-
-                overviewPath = "dfs://vnpy_overview"
-                if((existsDatabase(overviewPath).not())){
-                    overview_exchange = database(, VALUE, ["vnpy"])
-                    overview_symbol = database(, VALUE, ["vnpy"])
-                    overview_interval = database(, VALUE, ["vnpy"])
-                    db_overview = database(overviewPath, COMPO, [overview_exchange, overview_symbol, overview_interval],engine=`TSDB)
-                    overview_t = table(100:100,`symbol`exchange`interval`count`start`end,[SYMBOL,SYMBOL,SYMBOL,INT,NANOTIMESTAMP,NANOTIMESTAMP])
-                    db_overview.createPartitionedTable(overview_t, `overview, partitionColumns=["exchange", "symbol", "interval"], sortColumns=["symbol","start"], keepDuplicates=LAST)
-                }
-                '''
         self.session.run(script)
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
@@ -99,20 +117,38 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["close_price"].append(float(bar.close_price))
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "symbol", self.pool)
-        re = appender.append(data_frame)
-        print("存入bar数量：", re)
+        appender.append(data_frame)
 
         # overview
         # 读取
-        trade = self.session.loadTable(tableName="bar",dbPath="dfs://vnpy_bar")
-        df_start = trade.where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"interval='{interval.value}'").sort(bys=['datetime']).top(1).toDF()
-        df_end = trade.where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"interval='{interval.value}'").sort(bys=['datetime desc']).top(1).toDF()
-        df_count = trade.select('count(*)').where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"interval='{interval.value}'").toDF()
+        trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
+        df_start = trade.where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"interval='{interval.value}'").sort(bys=["datetime"]).top(1).toDF()
+
+        df_end = trade.where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"interval='{interval.value}'").sort(bys=["datetime desc"]).top(1).toDF()
+
+        df_count = trade.select(
+            "count(*)").where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"interval='{interval.value}'").toDF()
+
         count = df_count["count"][0]
         start = df_start["datetime"][0]
         end = df_end["datetime"][0]
+
         # 写入
-        data_frame = pd.DataFrame({"symbol": [str(symbol)], "exchange": [str(exchange.value)], "interval": [str(interval.value)], "count": [count], "start": [start], "end": [end]})
+        data_frame = pd.DataFrame({"symbol": [str(symbol)],
+                                   "exchange": [str(exchange.value)],
+                                   "interval": [str(interval.value)],
+                                   "count": [count],
+                                   "start": [start],
+                                   "end": [end]})
         appender = ddb.PartitionedTableAppender("dfs://vnpy_overview", "overview", "symbol", self.pool)
         appender.append(data_frame)
 
@@ -170,8 +206,7 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["ask_volume_5"].append(float(tick.ask_volume_5))
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
-        re = appender.append(data_frame)
-        print("存入数量：", re)
+        appender.append(data_frame)
 
     def load_bar_data(
         self,
@@ -189,10 +224,19 @@ class DolphindbDatabase(BaseDatabase):
         end = str(end).replace("-", ".")
 
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
-        df = trade.where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"interval='{interval.value}'").where(f"datetime>={start}").where(f"datetime<={end}").toDF()
+        df = trade.where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"interval='{interval.value}'").where(
+            f"datetime>={start}").where(
+            f"datetime<={end}").toDF()
+
         bars: List[BarData] = []
-        for symbol, exchange, date_time, interval, volume, open_interest, open_price, high_price, low_price, close_price in zip(df['symbol'], df['exchange'], df['datetime'], df['interval'],
-                                                                                                                                df['volume'], df['open_interest'], df['open_price'], df['high_price'], df['low_price'], df['close_price']):
+        for symbol, exchange, date_time, interval, volume, open_interest,\
+            open_price, high_price, low_price, close_price\
+            in zip(df["symbol"], df["exchange"], df["datetime"], df["interval"], df["volume"],
+                   df["open_interest"], df["open_price"], df["high_price"], df["low_price"], df["close_price"]):
+
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             bar = BarData("DB", symbol, Exchange(exchange), tz_time)
             bar.symbol = symbol
@@ -221,18 +265,28 @@ class DolphindbDatabase(BaseDatabase):
         end = str(end).replace("-", ".")
 
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
-        df = trade.where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"datetime>={start}").where(f"datetime<={end}").toDF()
+        df = trade.where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"datetime>={start}").where(
+            f"datetime<={end}").toDF()
+
         ticks: List[TickData] = []
-        for symbol, exchange, date_time, name, volume, turnover, open_interest, last_price, last_volume, limit_up, limit_down, \
-            open_price, high_price, low_price, pre_close,  bid_price_1, bid_price_2, bid_price_3, bid_price_4, bid_price_5, \
-            ask_price_1, ask_price_2, ask_price_3, ask_price_4, ask_price_5,  \
-            bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5, \
-            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5 in \
-            zip(df['symbol'], df['exchange'], df['datetime'], df['name'], df['volume'], df['turnover'], df['last_price'], df['last_volume'], df['limit_up'], df['limit_down'],
-                df['open_price'], df['high_price'], df['low_price'], df['pre_close'], df['bid_price_1'], df['bid_price_2'], df['bid_price_3'], df['bid_price_4'], df['bid_price_5'],
-                df['ask_price_1'], df['ask_price_2'], df['ask_price_3'], df['ask_price_4'], df['ask_price_5'],
-                df['bid_volume_1'], df['bid_volume_2'], df['bid_volume_3'], df['bid_volume_4'], df['bid_volume_5'],
-                df['ask_volume_1'], df['ask_volume_2'], df['ask_volume_3'], df['ask_volume_4'], df['ask_volume_5']):
+        for symbol, exchange, date_time, name, volume, turnover,\
+            open_interest, last_price, last_volume, limit_up, limit_down,\
+            open_price, high_price, low_price, pre_close,\
+            bid_price_1, bid_price_2, bid_price_3, bid_price_4, bid_price_5,\
+            ask_price_1, ask_price_2, ask_price_3, ask_price_4, ask_price_5,\
+            bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
+            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5\
+            in zip(df["symbol"], df["exchange"], df["datetime"], df["name"], df["volume"], df["turnover"],
+                   df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
+                   df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
+                   df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
+                   df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
+                   df["bid_volume_1"], df["bid_volume_2"], df["bid_volume_3"], df["bid_volume_4"], df["bid_volume_5"],
+                   df["ask_volume_1"], df["ask_volume_2"], df["ask_volume_3"], df["ask_volume_4"], df["ask_volume_5"]):
+
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             tick = TickData("DB", symbol, Exchange(exchange), tz_time)
             tick.symbol = symbol
@@ -285,11 +339,20 @@ class DolphindbDatabase(BaseDatabase):
     ) -> int:
         """删除bar数据"""
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
-        df = trade.select('count(*)').where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").where(f"interval='{interval.value}'").toDF()
+        df = trade.select(
+            "count(*)").where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").where(
+            f"interval='{interval.value}'").toDF()
+
         count = df["count"][0]
-        self.session.dropPartition(dbPath="dfs://vnpy_bar", partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"], tableName="bar")
+        self.session.dropPartition(dbPath="dfs://vnpy_bar",
+                                   partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
+                                   tableName="bar")
         # 删除overview
-        self.session.dropPartition(dbPath="dfs://vnpy_overview", partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"], tableName="overview")
+        self.session.dropPartition(dbPath="dfs://vnpy_overview",
+                                   partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
+                                   tableName="overview")
         return count
 
     def delete_tick_data(
@@ -299,9 +362,15 @@ class DolphindbDatabase(BaseDatabase):
     ) -> int:
         """删除tick数据"""
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
-        df = trade.select('count(*)').where(f"symbol='{symbol}'").where(f"exchange='{exchange.value}'").toDF()
+        df = trade.select(
+            "count(*)").where(
+            f"symbol='{symbol}'").where(
+            f"exchange='{exchange.value}'").toDF()
+
         count = df["count"][0]
-        self.session.dropPartition(dbPath="dfs://vnpy_tick", partitionPaths=[f"'{exchange.value}'", f"'{symbol}'"], tableName="tick")
+        self.session.dropPartition(dbPath="dfs://vnpy_tick",
+                                   partitionPaths=[f"'{exchange.value}'", f"'{symbol}'"],
+                                   tableName="tick")
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
@@ -309,7 +378,10 @@ class DolphindbDatabase(BaseDatabase):
         trade = self.session.loadTable(tableName="overview", dbPath="dfs://vnpy_overview")
         df = trade.select("*").toDF()
         overviews: List[BarOverview] = []
-        for symbol, exchange, interval, count, start, end in zip(df['symbol'], df['exchange'], df['interval'], df['count'], df['start'], df['end']):
+        for symbol, exchange, interval, count, start, end\
+            in zip(df["symbol"], df["exchange"], df["interval"],
+                   df["count"], df["start"], df["end"]):
+
             overview = BarOverview()
             overview.symbol = symbol
             overview.exchange = Exchange(exchange)
