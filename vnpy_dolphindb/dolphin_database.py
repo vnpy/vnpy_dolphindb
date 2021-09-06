@@ -24,8 +24,8 @@ script = """
         bar_interval = database(, VALUE, ["vnpy"])
         db_bar = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval], engine=`TSDB)
         bar_t = table(100:100,
-                     `symbol`exchange`datetime`interval`volume`open_interest`open_price`high_price`low_price`close_price,
-                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+                     `symbol`exchange`datetime`interval`volume`turnover`open_interest`open_price`high_price`low_price`close_price,
+                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
         db_bar.createPartitionedTable(bar_t,
                                       `bar,
                                       partitionColumns=["exchange", "symbol", "interval"],
@@ -40,13 +40,13 @@ script = """
         db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
         tick_t = table(100:100,
                        `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                       `open_price`high_price`low_price`pre_close\
+                       `open_price`high_price`low_price`pre_close`localtime\
                        `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
                        `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
                        `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
                        `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,
                        [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
@@ -112,6 +112,7 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["datetime"].append(np.datetime64(convert_tz(bar.datetime)))
             test_dict["interval"].append(str(bar.interval.value))
             test_dict["volume"].append(float(bar.volume))
+            test_dict["turnover"].append(float(bar.turnover))
             test_dict["open_interest"].append(float(bar.open_interest))
             test_dict["open_price"].append(float(bar.open_price))
             test_dict["high_price"].append(float(bar.high_price))
@@ -171,6 +172,7 @@ class DolphindbDatabase(BaseDatabase):
 
             test_dict["name"].append(str(tick.name))
             test_dict["volume"].append(float(tick.volume))
+            test_dict["turnover"].append(float(tick.turnover))
             test_dict["open_interest"].append(float(tick.open_interest))
             test_dict["last_price"].append(float(tick.last_price))
             test_dict["last_volume"].append(float(tick.last_volume))
@@ -205,6 +207,8 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["ask_volume_3"].append(float(tick.ask_volume_3))
             test_dict["ask_volume_4"].append(float(tick.ask_volume_4))
             test_dict["ask_volume_5"].append(float(tick.ask_volume_5))
+
+            test_dict["localtime"].append(np.datetime64(convert_tz(tick.localtime)))
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
         appender.append(data_frame)
@@ -234,15 +238,16 @@ class DolphindbDatabase(BaseDatabase):
             f"datetime<={end}").toDF()
 
         bars: List[BarData] = []
-        for symbol, exchange, date_time, interval, volume, open_interest,\
+        for symbol, exchange, date_time, interval, volume, open_interest, turnover,\
             open_price, high_price, low_price, close_price\
-            in zip(df["symbol"], df["exchange"], df["datetime"], df["interval"], df["volume"],
+            in zip(df["symbol"], df["exchange"], df["datetime"], df["interval"], df["volume"], df["turnover"],
                    df["open_interest"], df["open_price"], df["high_price"], df["low_price"], df["close_price"]):
 
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             bar = BarData("DB", symbol, Exchange(exchange), tz_time)
             bar.symbol = symbol
             bar.volume = volume
+            bar.turnover = turnover
             bar.open_price = open_price
             bar.high_price = high_price
             bar.low_price = low_price
@@ -281,14 +286,15 @@ class DolphindbDatabase(BaseDatabase):
             bid_price_1, bid_price_2, bid_price_3, bid_price_4, bid_price_5,\
             ask_price_1, ask_price_2, ask_price_3, ask_price_4, ask_price_5,\
             bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
-            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5\
+            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5, localtime\
             in zip(df["symbol"], df["exchange"], df["datetime"], df["name"], df["volume"], df["turnover"],
                    df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
                    df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
                    df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
                    df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
                    df["bid_volume_1"], df["bid_volume_2"], df["bid_volume_3"], df["bid_volume_4"], df["bid_volume_5"],
-                   df["ask_volume_1"], df["ask_volume_2"], df["ask_volume_3"], df["ask_volume_4"], df["ask_volume_5"]):
+                   df["ask_volume_1"], df["ask_volume_2"], df["ask_volume_3"], df["ask_volume_4"], df["ask_volume_5"],
+                   df["localtime"]):
 
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             tick = TickData("DB", symbol, Exchange(exchange), tz_time)
@@ -331,6 +337,9 @@ class DolphindbDatabase(BaseDatabase):
             tick.ask_volume_3 = ask_volume_3
             tick.ask_volume_4 = ask_volume_4
             tick.ask_volume_5 = ask_volume_5
+
+            tick.localtime = localtime
+
             ticks.append(tick)
         return ticks
 
