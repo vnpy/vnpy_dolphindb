@@ -8,18 +8,13 @@
     <img src ="https://img.shields.io/badge/version-1.0.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-linux|windows-yellow.svg"/>
     <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
-    <img src ="https://img.shields.io/github/license/vnpy/vnpy.svg?color=orange"/>
 </p>
 
 ## 说明
 
-为vn.py提供了DolphinDB数据库的使用支持
+dolphindb数据库接口，需要首先安装DolphinDB 2.0以上版本才能使用，数据读取速度快，适合对数据读取速度有要求用户。
 
 ## 安装
-
-安装需要基于2.4.0版本以上的[VN Studio](https://www.vnpy.com)。
-
-安装DolphinDB版本需要高于2.0
 
 下载解压后在cmd运行：
 

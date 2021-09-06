@@ -23,7 +23,7 @@
 
 import importlib_metadata
 
-from .dolphin_database import SqliteDatabase as Database
+from .dolphin_database import DolphindbDatabase as Database
 
 try:
     __version__ = importlib_metadata.version("vnpy_dolphindb")
