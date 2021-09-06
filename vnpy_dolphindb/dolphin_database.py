@@ -417,6 +417,3 @@ class DolphindbDatabase(BaseDatabase):
             print("overview数据库已删除")
         else:
             print("overview未正常删除数据库")
-
-
-database_manager = DolphindbDatabase()
