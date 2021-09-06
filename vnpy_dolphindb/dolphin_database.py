@@ -15,6 +15,7 @@ from vnpy.trader.database import (
     convert_tz
 )
 
+# dolphindb脚本，用于在dolphindb中判断是否已存在目标数据库，并在未存在时新建
 script = """
     barPath = "dfs://vnpy_bar"
     if((existsDatabase(barPath).not())){
@@ -23,8 +24,8 @@ script = """
         bar_interval = database(, VALUE, ["vnpy"])
         db_bar = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval], engine=`TSDB)
         bar_t = table(100:100,
-                     `symbol`exchange`datetime`interval`volume`open_interest`open_price`high_price`low_price`close_price,
-                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+                     `symbol`exchange`datetime`interval`volume`turnover`open_interest`open_price`high_price`low_price`close_price,
+                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
         db_bar.createPartitionedTable(bar_t,
                                       `bar,
                                       partitionColumns=["exchange", "symbol", "interval"],
@@ -39,13 +40,13 @@ script = """
         db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
         tick_t = table(100:100,
                        `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                       `open_price`high_price`low_price`pre_close\
+                       `open_price`high_price`low_price`pre_close`localtime\
                        `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
                        `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
                        `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
                        `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,
                        [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
@@ -76,7 +77,7 @@ script = """
 
 
 class DolphindbDatabase(BaseDatabase):
-    """"""
+    """DolphinDB数据接口"""
 
     def __init__(self) -> None:
         """初始化数据库"""
@@ -91,7 +92,8 @@ class DolphindbDatabase(BaseDatabase):
         self.session.run(script)
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
-        """保存bar数据"""
+        """保存k线数据"""
+        # 读取主键参数
         bar: BarData = bars[0]
         symbol = bar.symbol
         exchange = bar.exchange
@@ -102,7 +104,7 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("gateway_name")
         key.remove("vt_symbol")
 
-        # 将BarData转化为DafaFrame存入数据库
+        # 将BarData转化为DafaFrame，并调整时区，存入数据库
         test_dict = {i: [] for i in key}
         for bar in bars:
             test_dict["symbol"].append(str(bar.symbol))
@@ -110,6 +112,7 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["datetime"].append(np.datetime64(convert_tz(bar.datetime)))
             test_dict["interval"].append(str(bar.interval.value))
             test_dict["volume"].append(float(bar.volume))
+            test_dict["turnover"].append(float(bar.turnover))
             test_dict["open_interest"].append(float(bar.open_interest))
             test_dict["open_price"].append(float(bar.open_price))
             test_dict["high_price"].append(float(bar.high_price))
@@ -119,8 +122,7 @@ class DolphindbDatabase(BaseDatabase):
         appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "symbol", self.pool)
         appender.append(data_frame)
 
-        # overview
-        # 读取
+        # 读取存入数据的K线汇总数据
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df_start = trade.where(
             f"symbol='{symbol}'").where(
@@ -142,7 +144,7 @@ class DolphindbDatabase(BaseDatabase):
         start = df_start["datetime"][0]
         end = df_end["datetime"][0]
 
-        # 写入
+        # 更新K线汇总数据
         data_frame = pd.DataFrame({"symbol": [str(symbol)],
                                    "exchange": [str(exchange.value)],
                                    "interval": [str(interval.value)],
@@ -153,7 +155,7 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(data_frame)
 
     def save_tick_data(self, ticks: List[TickData]) -> bool:
-        """保存tick数据"""
+        """保存TICK数据"""
         tick = ticks[0]
 
         key = [i for i in tick.__dict__]
@@ -161,7 +163,7 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("gateway_name")
         key.remove("vt_symbol")
 
-        # Convert tick data to dataframe
+        # 将TickData转化为DafaFrame，并调整时区，存入数据库
         test_dict = {i: [] for i in key}
         for tick in ticks:
             test_dict["symbol"].append(str(tick.symbol))
@@ -170,6 +172,7 @@ class DolphindbDatabase(BaseDatabase):
 
             test_dict["name"].append(str(tick.name))
             test_dict["volume"].append(float(tick.volume))
+            test_dict["turnover"].append(float(tick.turnover))
             test_dict["open_interest"].append(float(tick.open_interest))
             test_dict["last_price"].append(float(tick.last_price))
             test_dict["last_volume"].append(float(tick.last_volume))
@@ -204,6 +207,8 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["ask_volume_3"].append(float(tick.ask_volume_3))
             test_dict["ask_volume_4"].append(float(tick.ask_volume_4))
             test_dict["ask_volume_5"].append(float(tick.ask_volume_5))
+
+            test_dict["localtime"].append(np.datetime64(convert_tz(tick.localtime)))
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
         appender.append(data_frame)
@@ -216,13 +221,14 @@ class DolphindbDatabase(BaseDatabase):
         start: datetime,
         end: datetime
     ) -> List[BarData]:
-        """读取bar数据"""
-
+        """读取K线数据"""
+        # 将输入的时间格式修改为dolphindb可识别的格式
         start = np.datetime64(start)
         end = np.datetime64(end)
         start = str(start).replace("-", ".")
         end = str(end).replace("-", ".")
 
+        # 读取dolphindb中数据并转化为python可识别的dataframe格式
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df = trade.where(
             f"symbol='{symbol}'").where(
@@ -232,15 +238,16 @@ class DolphindbDatabase(BaseDatabase):
             f"datetime<={end}").toDF()
 
         bars: List[BarData] = []
-        for symbol, exchange, date_time, interval, volume, open_interest,\
+        for symbol, exchange, date_time, interval, volume, open_interest, turnover,\
             open_price, high_price, low_price, close_price\
-            in zip(df["symbol"], df["exchange"], df["datetime"], df["interval"], df["volume"],
+            in zip(df["symbol"], df["exchange"], df["datetime"], df["interval"], df["volume"], df["turnover"],
                    df["open_interest"], df["open_price"], df["high_price"], df["low_price"], df["close_price"]):
 
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             bar = BarData("DB", symbol, Exchange(exchange), tz_time)
             bar.symbol = symbol
             bar.volume = volume
+            bar.turnover = turnover
             bar.open_price = open_price
             bar.high_price = high_price
             bar.low_price = low_price
@@ -257,13 +264,14 @@ class DolphindbDatabase(BaseDatabase):
         start: datetime,
         end: datetime
     ) -> List[TickData]:
-        """读取tick数据"""
-
+        """读取Tick数据"""
+        # 将输入的时间格式修改为dolphindb可识别的格式
         start = np.datetime64(start)
         end = np.datetime64(end)
         start = str(start).replace("-", ".")
         end = str(end).replace("-", ".")
 
+        # 读取dolphindb中数据并转化为python可识别的dataframe格式
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
         df = trade.where(
             f"symbol='{symbol}'").where(
@@ -278,14 +286,15 @@ class DolphindbDatabase(BaseDatabase):
             bid_price_1, bid_price_2, bid_price_3, bid_price_4, bid_price_5,\
             ask_price_1, ask_price_2, ask_price_3, ask_price_4, ask_price_5,\
             bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
-            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5\
+            ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5, localtime\
             in zip(df["symbol"], df["exchange"], df["datetime"], df["name"], df["volume"], df["turnover"],
                    df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
                    df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
                    df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
                    df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
                    df["bid_volume_1"], df["bid_volume_2"], df["bid_volume_3"], df["bid_volume_4"], df["bid_volume_5"],
-                   df["ask_volume_1"], df["ask_volume_2"], df["ask_volume_3"], df["ask_volume_4"], df["ask_volume_5"]):
+                   df["ask_volume_1"], df["ask_volume_2"], df["ask_volume_3"], df["ask_volume_4"], df["ask_volume_5"],
+                   df["localtime"]):
 
             tz_time = datetime.fromtimestamp(date_time.timestamp(), DB_TZ)
             tick = TickData("DB", symbol, Exchange(exchange), tz_time)
@@ -328,6 +337,9 @@ class DolphindbDatabase(BaseDatabase):
             tick.ask_volume_3 = ask_volume_3
             tick.ask_volume_4 = ask_volume_4
             tick.ask_volume_5 = ask_volume_5
+
+            tick.localtime = localtime
+
             ticks.append(tick)
         return ticks
 
@@ -337,7 +349,7 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange,
         interval: Interval
     ) -> int:
-        """删除bar数据"""
+        """删除K线数据"""
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df = trade.select(
             "count(*)").where(
@@ -349,7 +361,7 @@ class DolphindbDatabase(BaseDatabase):
         self.session.dropPartition(dbPath="dfs://vnpy_bar",
                                    partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
                                    tableName="bar")
-        # 删除overview
+        # 删除K线汇总数据
         self.session.dropPartition(dbPath="dfs://vnpy_overview",
                                    partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
                                    tableName="overview")
@@ -360,7 +372,7 @@ class DolphindbDatabase(BaseDatabase):
         symbol: str,
         exchange: Exchange
     ) -> int:
-        """删除tick数据"""
+        """删除Tick数据"""
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
         df = trade.select(
             "count(*)").where(
@@ -374,7 +386,7 @@ class DolphindbDatabase(BaseDatabase):
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
-        """"获取所有overview数据"""
+        """"查询数据库中的K线汇总信息"""
         trade = self.session.loadTable(tableName="overview", dbPath="dfs://vnpy_overview")
         df = trade.select("*").toDF()
         overviews: List[BarOverview] = []
@@ -417,6 +429,3 @@ class DolphindbDatabase(BaseDatabase):
             print("overview数据库已删除")
         else:
             print("overview未正常删除数据库")
-
-
-database_manager = DolphindbDatabase()
