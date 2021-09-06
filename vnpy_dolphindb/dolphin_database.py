@@ -15,6 +15,7 @@ from vnpy.trader.database import (
     convert_tz
 )
 
+# dolphindb脚本，用于在dolphindb中判断是否已存在目标数据库，并在未存在时新建
 script = """
     barPath = "dfs://vnpy_bar"
     if((existsDatabase(barPath).not())){
@@ -76,7 +77,7 @@ script = """
 
 
 class DolphindbDatabase(BaseDatabase):
-    """"""
+    """DolphinDB数据接口"""
 
     def __init__(self) -> None:
         """初始化数据库"""
@@ -91,7 +92,8 @@ class DolphindbDatabase(BaseDatabase):
         self.session.run(script)
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
-        """保存bar数据"""
+        """保存k线数据"""
+        # 读取主键参数
         bar: BarData = bars[0]
         symbol = bar.symbol
         exchange = bar.exchange
@@ -102,7 +104,7 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("gateway_name")
         key.remove("vt_symbol")
 
-        # 将BarData转化为DafaFrame存入数据库
+        # 将BarData转化为DafaFrame，并调整时区，存入数据库
         test_dict = {i: [] for i in key}
         for bar in bars:
             test_dict["symbol"].append(str(bar.symbol))
@@ -119,8 +121,7 @@ class DolphindbDatabase(BaseDatabase):
         appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "symbol", self.pool)
         appender.append(data_frame)
 
-        # overview
-        # 读取
+        # 读取存入数据的K线汇总数据
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df_start = trade.where(
             f"symbol='{symbol}'").where(
@@ -142,7 +143,7 @@ class DolphindbDatabase(BaseDatabase):
         start = df_start["datetime"][0]
         end = df_end["datetime"][0]
 
-        # 写入
+        # 更新K线汇总数据
         data_frame = pd.DataFrame({"symbol": [str(symbol)],
                                    "exchange": [str(exchange.value)],
                                    "interval": [str(interval.value)],
@@ -153,7 +154,7 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(data_frame)
 
     def save_tick_data(self, ticks: List[TickData]) -> bool:
-        """保存tick数据"""
+        """保存TICK数据"""
         tick = ticks[0]
 
         key = [i for i in tick.__dict__]
@@ -161,7 +162,7 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("gateway_name")
         key.remove("vt_symbol")
 
-        # Convert tick data to dataframe
+        # 将TickData转化为DafaFrame，并调整时区，存入数据库
         test_dict = {i: [] for i in key}
         for tick in ticks:
             test_dict["symbol"].append(str(tick.symbol))
@@ -216,13 +217,14 @@ class DolphindbDatabase(BaseDatabase):
         start: datetime,
         end: datetime
     ) -> List[BarData]:
-        """读取bar数据"""
-
+        """读取K线数据"""
+        # 将输入的时间格式修改为dolphindb可识别的格式
         start = np.datetime64(start)
         end = np.datetime64(end)
         start = str(start).replace("-", ".")
         end = str(end).replace("-", ".")
 
+        # 读取dolphindb中数据并转化为python可识别的dataframe格式
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df = trade.where(
             f"symbol='{symbol}'").where(
@@ -257,13 +259,14 @@ class DolphindbDatabase(BaseDatabase):
         start: datetime,
         end: datetime
     ) -> List[TickData]:
-        """读取tick数据"""
-
+        """读取Tick数据"""
+        # 将输入的时间格式修改为dolphindb可识别的格式
         start = np.datetime64(start)
         end = np.datetime64(end)
         start = str(start).replace("-", ".")
         end = str(end).replace("-", ".")
 
+        # 读取dolphindb中数据并转化为python可识别的dataframe格式
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
         df = trade.where(
             f"symbol='{symbol}'").where(
@@ -337,7 +340,7 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange,
         interval: Interval
     ) -> int:
-        """删除bar数据"""
+        """删除K线数据"""
         trade = self.session.loadTable(tableName="bar", dbPath="dfs://vnpy_bar")
         df = trade.select(
             "count(*)").where(
@@ -349,7 +352,7 @@ class DolphindbDatabase(BaseDatabase):
         self.session.dropPartition(dbPath="dfs://vnpy_bar",
                                    partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
                                    tableName="bar")
-        # 删除overview
+        # 删除K线汇总数据
         self.session.dropPartition(dbPath="dfs://vnpy_overview",
                                    partitionPaths=[f"'{exchange.value}'", f"'{symbol}'", f"'{interval.value}'"],
                                    tableName="overview")
@@ -360,7 +363,7 @@ class DolphindbDatabase(BaseDatabase):
         symbol: str,
         exchange: Exchange
     ) -> int:
-        """删除tick数据"""
+        """删除Tick数据"""
         trade = self.session.loadTable(tableName="tick", dbPath="dfs://vnpy_tick")
         df = trade.select(
             "count(*)").where(
@@ -374,7 +377,7 @@ class DolphindbDatabase(BaseDatabase):
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
-        """"获取所有overview数据"""
+        """"查询数据库中的K线汇总信息"""
         trade = self.session.loadTable(tableName="overview", dbPath="dfs://vnpy_overview")
         df = trade.select("*").toDF()
         overviews: List[BarOverview] = []
