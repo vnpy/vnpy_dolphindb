@@ -14,6 +14,8 @@ from vnpy.trader.database import (
     DB_TZ,
     convert_tz
 )
+from vnpy.trader.setting import SETTINGS
+
 
 # dolphindb脚本，用于在dolphindb中判断是否已存在目标数据库，并在未存在时新建
 script = """
@@ -85,9 +87,16 @@ class DolphindbDatabase(BaseDatabase):
         self.dbPath = "dfs://vnpy_"
         # 连接数据库
         self.session = ddb.session()
-        self.session.connect("localhost", 8848, "admin", "123456")
+        self.session.connect(SETTINGS["database.host"],
+                             8848,
+                             "admin",
+                             "123456")
         # 连接池用于多线程并发写入
-        self.pool = ddb.DBConnectionPool("localhost", 8848, 20, "admin", "123456")
+        self.pool = ddb.DBConnectionPool(SETTINGS["database.host"],
+                                         SETTINGS["database.port"],
+                                         20,
+                                         SETTINGS["database.user"],
+                                         SETTINGS["database.password"])
         # dolphindb初始化脚本，用于在第一次时创建数据库和表结构
         self.session.run(script)
 
