@@ -89,8 +89,8 @@ class DolphindbDatabase(BaseDatabase):
         self.session = ddb.session()
         self.session.connect(SETTINGS["database.host"],
                              8848,
-                             "admin",
-                             "123456")
+                             SETTINGS["database.user"],
+                             SETTINGS["database.password"])
         # 连接池用于多线程并发写入
         self.pool = ddb.DBConnectionPool(SETTINGS["database.host"],
                                          SETTINGS["database.port"],
