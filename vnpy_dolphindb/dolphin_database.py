@@ -163,6 +163,8 @@ class DolphindbDatabase(BaseDatabase):
         appender = ddb.PartitionedTableAppender("dfs://vnpy_overview", "overview", "symbol", self.pool)
         appender.append(data_frame)
 
+        return True
+
     def save_tick_data(self, ticks: List[TickData]) -> bool:
         """保存TICK数据"""
         tick = ticks[0]
@@ -221,6 +223,8 @@ class DolphindbDatabase(BaseDatabase):
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
         appender.append(data_frame)
+
+        return True
 
     def load_bar_data(
         self,
