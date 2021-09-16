@@ -42,17 +42,17 @@ script = """
         db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
         tick_t = table(100:100,
                        `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                       `open_price`high_price`low_price`pre_close`localtime\
+                       `open_price`high_price`low_price`pre_close\
                        `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
                        `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
                        `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
-                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,
+                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5`localtime,
                        [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP])
         db_tick.createPartitionedTable(tick_t,
                                        `tick,
                                        partitionColumns=["exchange", "symbol"],
@@ -114,20 +114,20 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("vt_symbol")
 
         # 将BarData转化为DafaFrame，并调整时区，存入数据库
-        test_dict = {i: [] for i in key}
+        d = {i: [] for i in key}
         for bar in bars:
-            test_dict["symbol"].append(str(bar.symbol))
-            test_dict["exchange"].append(str(bar.exchange.value))
-            test_dict["datetime"].append(np.datetime64(convert_tz(bar.datetime)))
-            test_dict["interval"].append(str(bar.interval.value))
-            test_dict["volume"].append(float(bar.volume))
-            test_dict["turnover"].append(float(bar.turnover))
-            test_dict["open_interest"].append(float(bar.open_interest))
-            test_dict["open_price"].append(float(bar.open_price))
-            test_dict["high_price"].append(float(bar.high_price))
-            test_dict["low_price"].append(float(bar.low_price))
-            test_dict["close_price"].append(float(bar.close_price))
-        data_frame = pd.DataFrame(test_dict)
+            d["symbol"].append(str(bar.symbol))
+            d["exchange"].append(str(bar.exchange.value))
+            d["datetime"].append(np.datetime64(convert_tz(bar.datetime)))
+            d["interval"].append(str(bar.interval.value))
+            d["volume"].append(float(bar.volume))
+            d["turnover"].append(float(bar.turnover))
+            d["open_interest"].append(float(bar.open_interest))
+            d["open_price"].append(float(bar.open_price))
+            d["high_price"].append(float(bar.high_price))
+            d["low_price"].append(float(bar.low_price))
+            d["close_price"].append(float(bar.close_price))
+        data_frame = pd.DataFrame(d)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "symbol", self.pool)
         appender.append(data_frame)
 
@@ -163,6 +163,8 @@ class DolphindbDatabase(BaseDatabase):
         appender = ddb.PartitionedTableAppender("dfs://vnpy_overview", "overview", "symbol", self.pool)
         appender.append(data_frame)
 
+        return True
+
     def save_tick_data(self, ticks: List[TickData]) -> bool:
         """保存TICK数据"""
         tick = ticks[0]
@@ -173,54 +175,56 @@ class DolphindbDatabase(BaseDatabase):
         key.remove("vt_symbol")
 
         # 将TickData转化为DafaFrame，并调整时区，存入数据库
-        test_dict = {i: [] for i in key}
+        d = {i: [] for i in key}
         for tick in ticks:
-            test_dict["symbol"].append(str(tick.symbol))
-            test_dict["exchange"].append(str(tick.exchange.value))
-            test_dict["datetime"].append(np.datetime64(convert_tz(tick.datetime)))
+            d["symbol"].append(str(tick.symbol))
+            d["exchange"].append(str(tick.exchange.value))
+            d["datetime"].append(np.datetime64(convert_tz(tick.datetime)))
 
-            test_dict["name"].append(str(tick.name))
-            test_dict["volume"].append(float(tick.volume))
-            test_dict["turnover"].append(float(tick.turnover))
-            test_dict["open_interest"].append(float(tick.open_interest))
-            test_dict["last_price"].append(float(tick.last_price))
-            test_dict["last_volume"].append(float(tick.last_volume))
-            test_dict["limit_up"].append(float(tick.limit_up))
-            test_dict["limit_down"].append(float(tick.limit_down))
+            d["name"].append(str(tick.name))
+            d["volume"].append(float(tick.volume))
+            d["turnover"].append(float(tick.turnover))
+            d["open_interest"].append(float(tick.open_interest))
+            d["last_price"].append(float(tick.last_price))
+            d["last_volume"].append(float(tick.last_volume))
+            d["limit_up"].append(float(tick.limit_up))
+            d["limit_down"].append(float(tick.limit_down))
 
-            test_dict["open_price"].append(float(tick.open_price))
-            test_dict["high_price"].append(float(tick.high_price))
-            test_dict["low_price"].append(float(tick.low_price))
-            test_dict["pre_close"].append(float(tick.pre_close))
+            d["open_price"].append(float(tick.open_price))
+            d["high_price"].append(float(tick.high_price))
+            d["low_price"].append(float(tick.low_price))
+            d["pre_close"].append(float(tick.pre_close))
 
-            test_dict["bid_price_1"].append(float(tick.bid_price_1))
-            test_dict["bid_price_2"].append(float(tick.bid_price_2))
-            test_dict["bid_price_3"].append(float(tick.bid_price_3))
-            test_dict["bid_price_4"].append(float(tick.bid_price_4))
-            test_dict["bid_price_5"].append(float(tick.bid_price_5))
+            d["bid_price_1"].append(float(tick.bid_price_1))
+            d["bid_price_2"].append(float(tick.bid_price_2))
+            d["bid_price_3"].append(float(tick.bid_price_3))
+            d["bid_price_4"].append(float(tick.bid_price_4))
+            d["bid_price_5"].append(float(tick.bid_price_5))
 
-            test_dict["ask_price_1"].append(float(tick.ask_price_1))
-            test_dict["ask_price_2"].append(float(tick.ask_price_2))
-            test_dict["ask_price_3"].append(float(tick.ask_price_3))
-            test_dict["ask_price_4"].append(float(tick.ask_price_4))
-            test_dict["ask_price_5"].append(float(tick.ask_price_5))
+            d["ask_price_1"].append(float(tick.ask_price_1))
+            d["ask_price_2"].append(float(tick.ask_price_2))
+            d["ask_price_3"].append(float(tick.ask_price_3))
+            d["ask_price_4"].append(float(tick.ask_price_4))
+            d["ask_price_5"].append(float(tick.ask_price_5))
 
-            test_dict["bid_volume_1"].append(float(tick.bid_volume_1))
-            test_dict["bid_volume_2"].append(float(tick.bid_volume_2))
-            test_dict["bid_volume_3"].append(float(tick.bid_volume_3))
-            test_dict["bid_volume_4"].append(float(tick.bid_volume_4))
-            test_dict["bid_volume_5"].append(float(tick.bid_volume_5))
+            d["bid_volume_1"].append(float(tick.bid_volume_1))
+            d["bid_volume_2"].append(float(tick.bid_volume_2))
+            d["bid_volume_3"].append(float(tick.bid_volume_3))
+            d["bid_volume_4"].append(float(tick.bid_volume_4))
+            d["bid_volume_5"].append(float(tick.bid_volume_5))
 
-            test_dict["ask_volume_1"].append(float(tick.ask_volume_1))
-            test_dict["ask_volume_2"].append(float(tick.ask_volume_2))
-            test_dict["ask_volume_3"].append(float(tick.ask_volume_3))
-            test_dict["ask_volume_4"].append(float(tick.ask_volume_4))
-            test_dict["ask_volume_5"].append(float(tick.ask_volume_5))
+            d["ask_volume_1"].append(float(tick.ask_volume_1))
+            d["ask_volume_2"].append(float(tick.ask_volume_2))
+            d["ask_volume_3"].append(float(tick.ask_volume_3))
+            d["ask_volume_4"].append(float(tick.ask_volume_4))
+            d["ask_volume_5"].append(float(tick.ask_volume_5))
 
-            test_dict["localtime"].append(np.datetime64(convert_tz(tick.localtime)))
-        data_frame = pd.DataFrame(test_dict)
+            d["localtime"].append(np.datetime64(tick.localtime))
+        data_frame = pd.DataFrame(d)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
         appender.append(data_frame)
+
+        return True
 
     def load_bar_data(
         self,
@@ -297,7 +301,7 @@ class DolphindbDatabase(BaseDatabase):
             bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
             ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5, localtime\
             in zip(df["symbol"], df["exchange"], df["datetime"], df["name"], df["volume"], df["turnover"],
-                   df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
+                   df["open_interest"], df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
                    df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
                    df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
                    df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
