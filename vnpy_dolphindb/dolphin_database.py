@@ -42,17 +42,17 @@ script = """
         db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
         tick_t = table(100:100,
                        `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                       `open_price`high_price`low_price`pre_close`localtime\
+                       `open_price`high_price`low_price`pre_close\
                        `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
                        `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
                        `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
-                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5,
+                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5`localtime,
                        [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP,\
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
                        DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
+                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP])
         db_tick.createPartitionedTable(tick_t,
                                        `tick,
                                        partitionColumns=["exchange", "symbol"],
@@ -217,7 +217,7 @@ class DolphindbDatabase(BaseDatabase):
             test_dict["ask_volume_4"].append(float(tick.ask_volume_4))
             test_dict["ask_volume_5"].append(float(tick.ask_volume_5))
 
-            test_dict["localtime"].append(np.datetime64(convert_tz(tick.localtime)))
+            test_dict["localtime"].append(np.datetime64(tick.localtime))
         data_frame = pd.DataFrame(test_dict)
         appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
         appender.append(data_frame)
@@ -297,7 +297,7 @@ class DolphindbDatabase(BaseDatabase):
             bid_volume_1, bid_volume_2, bid_volume_3, bid_volume_4, bid_volume_5,\
             ask_volume_1, ask_volume_2, ask_volume_3, ask_volume_4, ask_volume_5, localtime\
             in zip(df["symbol"], df["exchange"], df["datetime"], df["name"], df["volume"], df["turnover"],
-                   df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
+                   df["open_interest"], df["last_price"], df["last_volume"], df["limit_up"], df["limit_down"],
                    df["open_price"], df["high_price"], df["low_price"], df["pre_close"],
                    df["bid_price_1"], df["bid_price_2"], df["bid_price_3"], df["bid_price_4"], df["bid_price_5"],
                    df["ask_price_1"], df["ask_price_2"], df["ask_price_3"], df["ask_price_4"], df["ask_price_5"],
