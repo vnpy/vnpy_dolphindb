@@ -56,6 +56,7 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange = bar.exchange
         interval: Interval = bar.interval
 
+        # 转换为DatFrame写入数据库
         data: List[dict] = []
 
         for bar in bars:
@@ -209,14 +210,15 @@ class DolphindbDatabase(BaseDatabase):
         end: datetime
     ) -> List[BarData]:
         """读取K线数据"""
-        # 将输入的时间格式修改为dolphindb可识别的格式
+        # 转换时间格式
         start = np.datetime64(start)
-        end = np.datetime64(end)
         start: str = str(start).replace("-", ".")
+
+        end = np.datetime64(end)        
         end: str = str(end).replace("-", ".")
 
-        # 读取dolphindb中数据并转化为python可识别的dataframe格式
         table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+
         df: pd.DataFrame = (
             table.select("*")
             .where(f"symbol='{symbol}'")
@@ -226,6 +228,8 @@ class DolphindbDatabase(BaseDatabase):
             .where(f"datetime<={end}")
             .toDF()
         )
+
+        # 转换为BarData格式
         bars: List[BarData] = []
 
         for tp in df.itertuples():
@@ -257,14 +261,16 @@ class DolphindbDatabase(BaseDatabase):
         end: datetime
     ) -> List[TickData]:
         """读取Tick数据"""
-        # 将输入的时间格式修改为dolphindb可识别的格式
+        # 转换时间格式
         start = np.datetime64(start)
-        end = np.datetime64(end)
         start: str = str(start).replace("-", ".")
+
+        end = np.datetime64(end)        
         end: str = str(end).replace("-", ".")
 
-        # 读取dolphindb中数据并转化为python可识别的dataframe格式
+        # 读取数据DataFrame
         table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+
         df: pd.DataFrame = (
             table.select("*")
             .where(f"symbol='{symbol}'")
@@ -273,6 +279,8 @@ class DolphindbDatabase(BaseDatabase):
             .where(f"datetime<={end}")
             .toDF()
         )
+
+        # 转换为TickData格式
         ticks: List[TickData] = []
 
         for tp in df.itertuples():
@@ -318,6 +326,7 @@ class DolphindbDatabase(BaseDatabase):
                 gateway_name="DB"
             )
             ticks.append(tick)
+
         return ticks
 
     def delete_bar_data(
@@ -327,8 +336,10 @@ class DolphindbDatabase(BaseDatabase):
         interval: Interval
     ) -> int:
         """删除K线数据"""
+        # 加载数据表
         table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
+        # 统计数据量
         df: pd.DataFrame = (
             table.select("count(*)")
             .where(f"symbol='{symbol}'")
@@ -336,9 +347,9 @@ class DolphindbDatabase(BaseDatabase):
             .where(f"interval='{interval.value}'")
             .toDF()
         )
-
         count = df["count"][0]
 
+        # 删除K线数据
         (
             table.delete()
             .where(f"symbol='{symbol}'")
@@ -347,6 +358,7 @@ class DolphindbDatabase(BaseDatabase):
             .execute()
         )
 
+        # 删除K线汇总
         table = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         (
             table.delete()
@@ -364,17 +376,19 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange
     ) -> int:
         """删除Tick数据"""
+        # 加载数据表
         table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
+        # 统计数据量
         df: pd.DataFrame = (
             table.select("count(*)")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .toDF()
         )
-
         count: int = df["count"][0]
 
+        # 删除Tick数据
         (
             table.delete()
             .where(f"symbol='{symbol}'")
@@ -387,10 +401,7 @@ class DolphindbDatabase(BaseDatabase):
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
         table = self.session.loadTable(tableName="overview", dbPath=self.db_path)
-        df: pd.DataFrame = (
-            table.select("*")
-            .toDF()
-        )
+        df: pd.DataFrame = table.select("*").toDF()
 
         overviews: List[BarOverview] = []
 
@@ -404,4 +415,5 @@ class DolphindbDatabase(BaseDatabase):
                 end=datetime.fromtimestamp(tp.end.to_pydatetime().timestamp(), DB_TZ),
             )
             overviews.append(overview)
+
         return overviews
