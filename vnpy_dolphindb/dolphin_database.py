@@ -15,67 +15,12 @@ from vnpy.trader.database import (
     convert_tz
 )
 from vnpy.trader.setting import SETTINGS
-
-
-# dolphindb脚本，用于在dolphindb中判断是否已存在目标数据库，并在未存在时新建
-script = """
-    barPath = "dfs://vnpy_bar"
-    if((existsDatabase(barPath).not())){
-        bar_exchange = database(, VALUE, ["vnpy"])
-        bar_symbol = database(, VALUE, ["vnpy"])
-        bar_interval = database(, VALUE, ["vnpy"])
-        db_bar = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval], engine=`TSDB)
-        bar_t = table(100:100,
-                     `symbol`exchange`datetime`interval`volume`turnover`open_interest`open_price`high_price`low_price`close_price,
-                     [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE])
-        db_bar.createPartitionedTable(bar_t,
-                                      `bar,
-                                      partitionColumns=["exchange", "symbol", "interval"],
-                                      sortColumns=["symbol","datetime"],
-                                      keepDuplicates=LAST)
-    }
-
-    tickPath = "dfs://vnpy_tick"
-    if((existsDatabase(tickPath).not())){
-        tick_exchange = database(, VALUE, ["vnpy"])
-        tick_symbol = database(, VALUE, ["vnpy"])
-        db_tick = database(tickPath, COMPO, [tick_exchange, tick_symbol], engine=`TSDB)
-        tick_t = table(100:100,
-                       `symbol`exchange`datetime`name`volume`turnover`open_interest`last_price`last_volume`limit_up`limit_down\
-                       `open_price`high_price`low_price`pre_close\
-                       `bid_price_1`bid_price_2`bid_price_3`bid_price_4`bid_price_5\
-                       `ask_price_1`ask_price_2`ask_price_3`ask_price_4`ask_price_5\
-                       `bid_volume_1`bid_volume_2`bid_volume_3`bid_volume_4`bid_volume_5\
-                       `ask_volume_1`ask_volume_2`ask_volume_3`ask_volume_4`ask_volume_5`localtime,
-                       [SYMBOL,SYMBOL,NANOTIMESTAMP,SYMBOL,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,\
-                       DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,NANOTIMESTAMP])
-        db_tick.createPartitionedTable(tick_t,
-                                       `tick,
-                                       partitionColumns=["exchange", "symbol"],
-                                       sortColumns=["symbol","datetime"],
-                                       keepDuplicates=LAST)
-    }
-
-    overviewPath = "dfs://vnpy_overview"
-    if((existsDatabase(overviewPath).not())){
-        overview_exchange = database(, VALUE, ["vnpy"])
-        overview_symbol = database(, VALUE, ["vnpy"])
-        overview_interval = database(, VALUE, ["vnpy"])
-        db_overview = database(overviewPath, COMPO, [overview_exchange, overview_symbol, overview_interval], engine=`TSDB)
-        overview_t = table(100:100,
-                           `symbol`exchange`interval`count`start`end,
-                           [SYMBOL,SYMBOL,SYMBOL,INT,NANOTIMESTAMP,NANOTIMESTAMP])
-        db_overview.createPartitionedTable(overview_t,
-                                           `overview,
-                                           partitionColumns=["exchange", "symbol", "interval"],
-                                           sortColumns=["symbol","start"],
-                                           keepDuplicates=LAST)
-    }
-"""
+from .dolphindb_script import (
+    create_database,
+    create_bar_table,
+    create_tick_table,
+    create_overview_table
+)
 
 
 class DolphindbDatabase(BaseDatabase):
@@ -98,7 +43,11 @@ class DolphindbDatabase(BaseDatabase):
                                          SETTINGS["database.user"],
                                          SETTINGS["database.password"])
         # dolphindb初始化脚本，用于在第一次时创建数据库和表结构
-        self.session.run(script)
+        if not self.session.existsDatabase(self.dbPath):
+            self.session.run(create_database)
+            self.session.run(create_bar_table)
+            self.session.run(create_tick_table)
+            self.session.run(create_overview_table)
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存k线数据"""
