@@ -1,13 +1,15 @@
+"""
+DolphinDB脚本，用于在DolphinDB中创建数据库和数据表。
+"""
 
-# dolphindb脚本，用于在dolphindb创建数据库和表
 # 创建数据库
-create_database = """
+CREATE_DATABASE_SCRIPT = """
 dataPath = "dfs://vnpy"
 db = database(dataPath, VALUE, 2000.01M..2030.12M, engine=`TSDB)
 """
 
 # 创建bar表
-create_bar_table = """
+CREATE_BAR_TABLE_SCRIPT = """
 db = database(dataPath)
 
 bar_columns = ["symbol", "exchange", "datetime", "interval", "volume", "turnover", "open_interest", "open_price", "high_price", "low_price", "close_price"]
@@ -19,11 +21,12 @@ db.createPartitionedTable(
     "bar",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "interval", "datetime"],
-    keepDuplicates=LAST)
+    keepDuplicates=LAST
+)
 """
 
 # 创建tick表
-create_tick_table = """
+CREATE_TICK_TABLE_SCRIPT = """
 db = database(dataPath)
 
 tick_columns = ["symbol", "exchange", "datetime", "name", "volume", "turnover", "open_interest", "last_price", "last_volume", "limit_up", "limit_down",
@@ -45,11 +48,12 @@ db.createPartitionedTable(
     "tick",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "datetime"],
-    keepDuplicates=LAST)
+    keepDuplicates=LAST
+)
 """
 
 # 创建overview表
-create_overview_table = """
+CREATE_OVERVIEW_TABLE_SCRIPT = """
 db = database(dataPath)
 
 overview_columns = ["symbol", "exchange", "interval", "count", "start", "end", "datetime"]
@@ -61,5 +65,6 @@ db.createPartitionedTable(
     "overview",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "interval", "datetime"],
-    keepDuplicates=LAST)
+    keepDuplicates=LAST
+)
 """

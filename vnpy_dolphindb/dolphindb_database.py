@@ -1,9 +1,8 @@
-""""""
 from typing import Dict, List
-import pandas as pd
 from datetime import datetime
-import numpy as np
 
+import numpy as np
+import pandas as pd
 import dolphindb as ddb
 
 from vnpy.trader.constant import Exchange, Interval
@@ -15,6 +14,7 @@ from vnpy.trader.database import (
     convert_tz
 )
 from vnpy.trader.setting import SETTINGS
+
 from .dolphindb_script import (
     create_database,
     create_bar_table,
@@ -24,27 +24,25 @@ from .dolphindb_script import (
 
 
 class DolphindbDatabase(BaseDatabase):
-    """DolphinDB数据接口"""
+    """DolphinDB数据库接口"""
 
     def __init__(self) -> None:
-        """初始化数据库"""
-
-        self.user = SETTINGS["database.user"]
-        self.password = SETTINGS["database.password"]
-        self.host = SETTINGS["database.host"]
-        self.port = SETTINGS["database.port"]
-
-        self.dbPath = "dfs://vnpy"
+        """"""
+        self.user: str = SETTINGS["database.user"]
+        self.password: str = SETTINGS["database.password"]
+        self.host: str = SETTINGS["database.host"]
+        self.port: int = SETTINGS["database.port"]
+        self.db_path: str = "dfs://" + SETTINGS["database.database"]
 
         # 连接数据库
         self.session = ddb.session()
-        self.session.connect(self.host, 8848, self.user, self.password)
+        self.session.connect(self.host, self.port, self.user, self.password)
 
-        # 连接池用于多线程并发写入
+        # 创建连接池（用于多线程并发写入）
         self.pool = ddb.DBConnectionPool(self.host, self.port, 1, self.user, self.password)
 
         # dolphindb初始化脚本，用于在第一次时创建数据库和表结构
-        if not self.session.existsDatabase(self.dbPath):
+        if not self.session.existsDatabase(self.db_path):
             self.session.run(create_database)
             self.session.run(create_bar_table)
             self.session.run(create_tick_table)
@@ -81,11 +79,11 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.dbPath, "bar", "datetime", self.pool)
+        appender = ddb.PartitionedTableAppender(self.db_path, "bar", "datetime", self.pool)
         appender.append(df)
 
         # 读取存入数据的K线汇总数据
-        trade = self.session.loadTable(tableName="bar", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         df_start: pd.DataFrame = (
             trade.select("*")
@@ -134,7 +132,7 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.dbPath, "overview", "datetime", self.pool)
+        appender = ddb.PartitionedTableAppender(self.db_path, "overview", "datetime", self.pool)
         appender.append(df)
 
         return True
@@ -197,7 +195,7 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.dbPath, "tick", "datetime", self.pool)
+        appender = ddb.PartitionedTableAppender(self.db_path, "tick", "datetime", self.pool)
         appender.append(df)
 
         return True
@@ -218,7 +216,7 @@ class DolphindbDatabase(BaseDatabase):
         end: str = str(end).replace("-", ".")
 
         # 读取dolphindb中数据并转化为python可识别的dataframe格式
-        trade = self.session.loadTable(tableName="bar", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
         df: pd.DataFrame = (
             trade.select("*")
             .where(f"symbol='{symbol}'")
@@ -266,7 +264,7 @@ class DolphindbDatabase(BaseDatabase):
         end: str = str(end).replace("-", ".")
 
         # 读取dolphindb中数据并转化为python可识别的dataframe格式
-        trade = self.session.loadTable(tableName="tick", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="tick", dbPath=self.db_path)
         df: pd.DataFrame = (
             trade.select("*")
             .where(f"symbol='{symbol}'")
@@ -329,7 +327,7 @@ class DolphindbDatabase(BaseDatabase):
         interval: Interval
     ) -> int:
         """删除K线数据"""
-        trade = self.session.loadTable(tableName="bar", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         df: pd.DataFrame = (
             trade.select("count(*)")
@@ -349,7 +347,7 @@ class DolphindbDatabase(BaseDatabase):
             .execute()
         )
 
-        trade = self.session.loadTable(tableName="overview", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         (
             trade.delete()
             .where(f"symbol='{symbol}'")
@@ -366,7 +364,7 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange
     ) -> int:
         """删除Tick数据"""
-        trade = self.session.loadTable(tableName="tick", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
         df: pd.DataFrame = (
             trade.select("count(*)")
@@ -388,7 +386,7 @@ class DolphindbDatabase(BaseDatabase):
 
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
-        trade = self.session.loadTable(tableName="overview", dbPath=self.dbPath)
+        trade = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         df: pd.DataFrame = (
             trade.select("*")
             .toDF()
@@ -411,9 +409,9 @@ class DolphindbDatabase(BaseDatabase):
     def drop(self) -> None:
         """删除数据库"""
 
-        start = self.session.existsDatabase(self.dbPath)
-        self.session.dropDatabase(self.dbPath)
-        end = self.session.existsDatabase(self.dbPath)
+        start = self.session.existsDatabase(self.db_path)
+        self.session.dropDatabase(self.db_path)
+        end = self.session.existsDatabase(self.db_path)
         if start and not end:
             print("数据库已删除")
         else:
