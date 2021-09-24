@@ -32,7 +32,7 @@ class DolphindbDatabase(BaseDatabase):
         self.password: str = SETTINGS["database.password"]
         self.host: str = SETTINGS["database.host"]
         self.port: int = SETTINGS["database.port"]
-        self.db_path: str = "dfs://" + SETTINGS["database.database"]
+        self.db_path: str = "dfs://vnpy"
 
         # 连接数据库
         self.session = ddb.session()
@@ -405,14 +405,3 @@ class DolphindbDatabase(BaseDatabase):
             )
             overviews.append(overview)
         return overviews
-
-    def drop(self) -> None:
-        """删除数据库"""
-
-        start = self.session.existsDatabase(self.db_path)
-        self.session.dropDatabase(self.db_path)
-        end = self.session.existsDatabase(self.db_path)
-        if start and not end:
-            print("数据库已删除")
-        else:
-            print("未正常删除数据库")
