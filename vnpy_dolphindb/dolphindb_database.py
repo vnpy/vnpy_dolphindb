@@ -42,8 +42,6 @@ class DolphindbDatabase(BaseDatabase):
         self.pool = ddb.DBConnectionPool(self.host, self.port, 1, self.user, self.password)
 
         # 初始化数据库和数据表
-        if self.session.existsDatabase(self.db_path):
-            self.session.dropDatabase(self.db_path)
         if not self.session.existsDatabase(self.db_path):
             self.session.run(CREATE_DATABASE_SCRIPT)
             self.session.run(CREATE_BAR_TABLE_SCRIPT)

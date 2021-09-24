@@ -10,6 +10,7 @@ db = database(dataPath, VALUE, 2000.01M..2030.12M, engine=`TSDB)
 
 # 创建bar表
 CREATE_BAR_TABLE_SCRIPT = """
+dataPath = "dfs://vnpy"
 db = database(dataPath)
 
 bar_columns = ["symbol", "exchange", "datetime", "interval", "volume", "turnover", "open_interest", "open_price", "high_price", "low_price", "close_price"]
@@ -21,12 +22,12 @@ db.createPartitionedTable(
     "bar",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "interval", "datetime"],
-    keepDuplicates=LAST
-)
+    keepDuplicates=LAST)
 """
 
 # 创建tick表
 CREATE_TICK_TABLE_SCRIPT = """
+dataPath = "dfs://vnpy"
 db = database(dataPath)
 
 tick_columns = ["symbol", "exchange", "datetime", "name", "volume", "turnover", "open_interest", "last_price", "last_volume", "limit_up", "limit_down",
@@ -48,12 +49,12 @@ db.createPartitionedTable(
     "tick",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "datetime"],
-    keepDuplicates=LAST
-)
+    keepDuplicates=LAST)
 """
 
 # 创建overview表
 CREATE_OVERVIEW_TABLE_SCRIPT = """
+dataPath = "dfs://vnpy"
 db = database(dataPath)
 
 overview_columns = ["symbol", "exchange", "interval", "count", "start", "end", "datetime"]
@@ -65,6 +66,5 @@ db.createPartitionedTable(
     "overview",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "interval", "datetime"],
-    keepDuplicates=LAST
-)
+    keepDuplicates=LAST)
 """
