@@ -77,7 +77,7 @@ class DolphindbDatabase(BaseDatabase):
             d["low_price"].append(float(bar.low_price))
             d["close_price"].append(float(bar.close_price))
         data_frame = pd.DataFrame(d)
-        appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "symbol", self.pool)
+        appender = ddb.PartitionedTableAppender("dfs://vnpy_bar", "bar", "datetime", self.pool)
         appender.append(data_frame)
 
         # 读取存入数据的K线汇总数据
@@ -109,7 +109,7 @@ class DolphindbDatabase(BaseDatabase):
                                    "count": [count],
                                    "start": [start],
                                    "end": [end]})
-        appender = ddb.PartitionedTableAppender("dfs://vnpy_overview", "overview", "symbol", self.pool)
+        appender = ddb.PartitionedTableAppender("dfs://vnpy_overview", "overview", "datetime", self.pool)
         appender.append(data_frame)
 
         return True
@@ -170,7 +170,7 @@ class DolphindbDatabase(BaseDatabase):
 
             d["localtime"].append(np.datetime64(tick.localtime))
         data_frame = pd.DataFrame(d)
-        appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "symbol", self.pool)
+        appender = ddb.PartitionedTableAppender("dfs://vnpy_tick", "tick", "datetime", self.pool)
         appender.append(data_frame)
 
         return True

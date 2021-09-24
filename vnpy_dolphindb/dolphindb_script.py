@@ -3,11 +3,7 @@
 # 创建数据库
 create_database = """
 dataPath = "dfs://vnpy"
-
-bar_exchange = database(, VALUE, ["vnpy"])
-bar_symbol = database(, VALUE, ["vnpy"])
-bar_interval = database(, VALUE, ["vnpy"])
-db = database(barPath, COMPO, [bar_exchange, bar_symbol, bar_interval], engine=`TSDB)
+db = database(dataPath, VALUE, 2000.01M..2030.12M, engine=`TSDB)
 """
 
 # 创建bar表
@@ -18,12 +14,12 @@ bar_columns = ["symbol", "exchange", "datetime", "interval", "volume", "turnover
 bar_type = [SYMBOL, SYMBOL, NANOTIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE]
 bar = table(1:0, bar_columns, bar_type)
 
-db_bar.createPartitionedTable(
-bar,
-`bar,
-partitionColumns=["exchange", "symbol", "interval"],
-sortColumns=["symbol","datetime"],
-keepDuplicates=LAST)
+db.createPartitionedTable(
+    bar,
+    "bar",
+    partitionColumns=["datetime"],
+    sortColumns=["symbol", "exchange", "interval", "datetime"],
+    keepDuplicates=LAST)
 """
 
 # 创建tick表
@@ -44,12 +40,12 @@ tick_type = [SYMBOL, SYMBOL, NANOTIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUB
              DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, NANOTIMESTAMP]
 tick = table(1:0, tick_columns, tick_type)
 
-db_tick.createPartitionedTable(
-tick,
-`tick,
-partitionColumns=["exchange", "symbol"],
-sortColumns=["symbol","datetime"],
-keepDuplicates=LAST)
+db.createPartitionedTable(
+    tick,
+    "tick",
+    partitionColumns=["datetime"],
+    sortColumns=["symbol", "exchange", "datetime"],
+    keepDuplicates=LAST)
 """
 
 # 创建overview表
@@ -60,10 +56,10 @@ overview_columns = ["symbol", "exchange", "interval", "count", "start", "end", "
 overview_type = [SYMBOL, SYMBOL, SYMBOL, INT, NANOTIMESTAMP, NANOTIMESTAMP, NANOTIMESTAMP]
 overview = table(1:0, overview_columns, overview_type)
 
-db_overview.createPartitionedTable(
-overview,
-`overview,
-partitionColumns=["exchange", "symbol", "interval"],
-sortColumns=["symbol","start"],
-keepDuplicates=LAST)
+db.createPartitionedTable(
+    overview,
+    "overview",
+    partitionColumns=["datetime"],
+    sortColumns=["symbol", "exchange", "interval", "datetime"],
+    keepDuplicates=LAST)
 """
