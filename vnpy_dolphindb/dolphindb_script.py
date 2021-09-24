@@ -30,13 +30,13 @@ CREATE_TICK_TABLE_SCRIPT = """
 db = database(dataPath)
 
 tick_columns = ["symbol", "exchange", "datetime", "name", "volume", "turnover", "open_interest", "last_price", "last_volume", "limit_up", "limit_down",
-                "open_price", "high_price", "low_price", "pre_close", "interval",
+                "open_price", "high_price", "low_price", "pre_close",
                 "bid_price_1", "bid_price_2", "bid_price_3", "bid_price_4", "bid_price_5",
                 "ask_price_1", "ask_price_2", "ask_price_3", "ask_price_4", "ask_price_5",
                 "bid_volume_1", "bid_volume_2", "bid_volume_3", "bid_volume_4", "bid_volume_5",
                 "ask_volume_1", "ask_volume_2", "ask_volume_3", "ask_volume_4", "ask_volume_5", "localtime"]
 tick_type = [SYMBOL, SYMBOL, NANOTIMESTAMP, SYMBOL, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE,
-             DOUBLE, DOUBLE, DOUBLE, DOUBLE, SYMBOL,
+             DOUBLE, DOUBLE, DOUBLE, DOUBLE,
              DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE,
              DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE,
              DOUBLE, DOUBLE, DOUBLE, DOUBLE, DOUBLE,

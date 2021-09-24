@@ -16,10 +16,10 @@ from vnpy.trader.database import (
 from vnpy.trader.setting import SETTINGS
 
 from .dolphindb_script import (
-    create_database,
-    create_bar_table,
-    create_tick_table,
-    create_overview_table
+    CREATE_DATABASE_SCRIPT,
+    CREATE_BAR_TABLE_SCRIPT,
+    CREATE_TICK_TABLE_SCRIPT,
+    CREATE_OVERVIEW_TABLE_SCRIPT
 )
 
 
@@ -38,15 +38,17 @@ class DolphindbDatabase(BaseDatabase):
         self.session = ddb.session()
         self.session.connect(self.host, self.port, self.user, self.password)
 
-        # 创建连接池（用于多线程并发写入）
+        # 创建连接池（用于数据写入）
         self.pool = ddb.DBConnectionPool(self.host, self.port, 1, self.user, self.password)
 
-        # dolphindb初始化脚本，用于在第一次时创建数据库和表结构
+        # 初始化数据库和数据表
+        if self.session.existsDatabase(self.db_path):
+            self.session.dropDatabase(self.db_path)
         if not self.session.existsDatabase(self.db_path):
-            self.session.run(create_database)
-            self.session.run(create_bar_table)
-            self.session.run(create_tick_table)
-            self.session.run(create_overview_table)
+            self.session.run(CREATE_DATABASE_SCRIPT)
+            self.session.run(CREATE_BAR_TABLE_SCRIPT)
+            self.session.run(CREATE_TICK_TABLE_SCRIPT)
+            self.session.run(CREATE_OVERVIEW_TABLE_SCRIPT)
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """保存k线数据"""
@@ -82,11 +84,11 @@ class DolphindbDatabase(BaseDatabase):
         appender = ddb.PartitionedTableAppender(self.db_path, "bar", "datetime", self.pool)
         appender.append(df)
 
-        # 读取存入数据的K线汇总数据
-        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+        # 计算已有K线数据的汇总
+        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         df_start: pd.DataFrame = (
-            trade.select("*")
+            table.select("*")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -95,7 +97,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         df_end: pd.DataFrame = (
-            trade.select("*")
+            table.select("*")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -104,7 +106,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         df_count: pd.DataFrame = (
-            trade.select("count(*)")
+            table.select("count(*)")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -112,13 +114,14 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         count: int = df_count["count"][0]
-        start = df_start["datetime"][0]
-        end = df_end["datetime"][0]
+        start: datetime = df_start["datetime"][0]
+        end: datetime = df_end["datetime"][0]
 
         # 更新K线汇总数据
         data: List[dict] = []
 
-        dt = np.datetime64(datetime(2022, 1, 1))
+        dt = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
+
         d: Dict = {
             "symbol": symbol,
             "exchange": exchange.value,
@@ -162,7 +165,6 @@ class DolphindbDatabase(BaseDatabase):
                 "high_price": tick.high_price,
                 "low_price": tick.low_price,
                 "pre_close": tick.pre_close,
-                "interval": "tick",
 
                 "bid_price_1": tick.bid_price_1,
                 "bid_price_2": tick.bid_price_2,
@@ -216,9 +218,9 @@ class DolphindbDatabase(BaseDatabase):
         end: str = str(end).replace("-", ".")
 
         # 读取dolphindb中数据并转化为python可识别的dataframe格式
-        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
         df: pd.DataFrame = (
-            trade.select("*")
+            table.select("*")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -264,9 +266,9 @@ class DolphindbDatabase(BaseDatabase):
         end: str = str(end).replace("-", ".")
 
         # 读取dolphindb中数据并转化为python可识别的dataframe格式
-        trade = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
         df: pd.DataFrame = (
-            trade.select("*")
+            table.select("*")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"datetime>={start}")
@@ -327,10 +329,10 @@ class DolphindbDatabase(BaseDatabase):
         interval: Interval
     ) -> int:
         """删除K线数据"""
-        trade = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         df: pd.DataFrame = (
-            trade.select("count(*)")
+            table.select("count(*)")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -340,16 +342,16 @@ class DolphindbDatabase(BaseDatabase):
         count = df["count"][0]
 
         (
-            trade.delete()
+            table.delete()
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
             .execute()
         )
 
-        trade = self.session.loadTable(tableName="overview", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         (
-            trade.delete()
+            table.delete()
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .where(f"interval='{interval.value}'")
@@ -364,10 +366,10 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange
     ) -> int:
         """删除Tick数据"""
-        trade = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
         df: pd.DataFrame = (
-            trade.select("count(*)")
+            table.select("count(*)")
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .toDF()
@@ -376,7 +378,7 @@ class DolphindbDatabase(BaseDatabase):
         count: int = df["count"][0]
 
         (
-            trade.delete()
+            table.delete()
             .where(f"symbol='{symbol}'")
             .where(f"exchange='{exchange.value}'")
             .execute()
@@ -386,9 +388,9 @@ class DolphindbDatabase(BaseDatabase):
 
     def get_bar_overview(self) -> List[BarOverview]:
         """"查询数据库中的K线汇总信息"""
-        trade = self.session.loadTable(tableName="overview", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         df: pd.DataFrame = (
-            trade.select("*")
+            table.select("*")
             .toDF()
         )
 
