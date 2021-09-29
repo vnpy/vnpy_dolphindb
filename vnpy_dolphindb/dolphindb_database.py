@@ -229,16 +229,18 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
+        df.set_index("datetime", inplace=True)
+        ds = df.tz_localize(DB_TZ)
+
         # 转换为BarData格式
         bars: List[BarData] = []
 
-        for tp in df.itertuples():
-            dt = datetime.fromtimestamp(tp.datetime.to_pydatetime().timestamp(), DB_TZ)
+        for tp, dt in zip(ds.itertuples(), ds.index):
 
             bar = BarData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=dt,
+                datetime=dt.to_pydatetime(),
                 interval=interval,
                 volume=tp.volume,
                 turnover=tp.turnover,
@@ -280,16 +282,18 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
+        df.set_index("datetime", inplace=True)
+        ds = df.tz_localize(DB_TZ)
+
         # 转换为TickData格式
         ticks: List[TickData] = []
 
-        for tp in df.itertuples():
-            dt = datetime.fromtimestamp(tp.datetime.to_pydatetime().timestamp(), DB_TZ)
+        for tp, dt in zip(ds.itertuples(), ds.index):
 
             tick = TickData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=dt,
+                datetime=dt.to_pydatetime(),
                 name=tp.name,
                 volume=tp.volume,
                 turnover=tp.turnover,
