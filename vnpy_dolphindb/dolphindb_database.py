@@ -152,42 +152,42 @@ class DolphindbDatabase(BaseDatabase):
                 "datetime": dt,
 
                 "name": tick.name,
-                "volume": tick.volume,
+                "volume": float(tick.volume),
                 "turnover": float(tick.turnover),
-                "open_interest": tick.open_interest,
-                "last_price": tick.last_price,
+                "open_interest": float(tick.open_interest),
+                "last_price": float(tick.last_price),
                 "last_volume": float(tick.last_volume),
-                "limit_up": tick.limit_up,
-                "limit_down": tick.limit_down,
+                "limit_up": float(tick.limit_up),
+                "limit_down": float(tick.limit_down),
 
-                "open_price": tick.open_price,
-                "high_price": tick.high_price,
-                "low_price": tick.low_price,
-                "pre_close": tick.pre_close,
+                "open_price": float(tick.open_price),
+                "high_price": float(tick.high_price),
+                "low_price": float(tick.low_price),
+                "pre_close": float(tick.pre_close),
 
-                "bid_price_1": tick.bid_price_1,
-                "bid_price_2": tick.bid_price_2,
-                "bid_price_3": tick.bid_price_3,
-                "bid_price_4": tick.bid_price_4,
-                "bid_price_5": tick.bid_price_5,
+                "bid_price_1": float(tick.bid_price_1),
+                "bid_price_2": float(tick.bid_price_2),
+                "bid_price_3": float(tick.bid_price_3),
+                "bid_price_4": float(tick.bid_price_4),
+                "bid_price_5": float(tick.bid_price_5),
 
-                "ask_price_1": tick.ask_price_1,
-                "ask_price_2": tick.ask_price_2,
-                "ask_price_3": tick.ask_price_3,
-                "ask_price_4": tick.ask_price_4,
-                "ask_price_5": tick.ask_price_5,
+                "ask_price_1": float(tick.ask_price_1),
+                "ask_price_2": float(tick.ask_price_2),
+                "ask_price_3": float(tick.ask_price_3),
+                "ask_price_4": float(tick.ask_price_4),
+                "ask_price_5": float(tick.ask_price_5),
 
-                "bid_volume_1": tick.bid_volume_1,
-                "bid_volume_2": tick.bid_volume_2,
-                "bid_volume_3": tick.bid_volume_3,
-                "bid_volume_4": tick.bid_volume_4,
-                "bid_volume_5": tick.bid_volume_5,
+                "bid_volume_1": float(tick.bid_volume_1),
+                "bid_volume_2": float(tick.bid_volume_2),
+                "bid_volume_3": float(tick.bid_volume_3),
+                "bid_volume_4": float(tick.bid_volume_4),
+                "bid_volume_5": float(tick.bid_volume_5),
 
-                "ask_volume_1": tick.ask_volume_1,
-                "ask_volume_2": tick.ask_volume_2,
-                "ask_volume_3": tick.ask_volume_3,
-                "ask_volume_4": tick.ask_volume_4,
-                "ask_volume_5": tick.ask_volume_5,
+                "ask_volume_1": float(tick.ask_volume_1),
+                "ask_volume_2": float(tick.ask_volume_2),
+                "ask_volume_3": float(tick.ask_volume_3),
+                "ask_volume_4": float(tick.ask_volume_4),
+                "ask_volume_5": float(tick.ask_volume_5),
 
                 "localtime": np.datetime64(tick.localtime),
             }
@@ -214,7 +214,7 @@ class DolphindbDatabase(BaseDatabase):
         start = np.datetime64(start)
         start: str = str(start).replace("-", ".")
 
-        end = np.datetime64(end)        
+        end = np.datetime64(end)
         end: str = str(end).replace("-", ".")
 
         table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
@@ -266,7 +266,7 @@ class DolphindbDatabase(BaseDatabase):
         start = np.datetime64(start)
         start: str = str(start).replace("-", ".")
 
-        end = np.datetime64(end)        
+        end = np.datetime64(end)
         end: str = str(end).replace("-", ".")
 
         # 读取数据DataFrame
