@@ -229,6 +229,9 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
+        if df.empty():
+            return []
+
         df.set_index("datetime", inplace=True)
         df = df.tz_localize(DB_TZ)
 
@@ -280,6 +283,9 @@ class DolphindbDatabase(BaseDatabase):
             .where(f"datetime<={end}")
             .toDF()
         )
+
+        if df.empty():
+            return []
 
         df.set_index("datetime", inplace=True)
         df = df.tz_localize(DB_TZ)
