@@ -229,7 +229,7 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
-        if df.empty():
+        if df.empty:
             return []
 
         df.set_index("datetime", inplace=True)
@@ -284,7 +284,7 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
-        if df.empty():
+        if df.empty:
             return []
 
         df.set_index("datetime", inplace=True)
