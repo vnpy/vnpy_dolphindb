@@ -88,27 +88,27 @@ class DolphindbDatabase(BaseDatabase):
 
         df_start: pd.DataFrame = (
             table.select("*")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .sort(bys=["datetime"]).top(1)
             .toDF()
         )
 
         df_end: pd.DataFrame = (
             table.select("*")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .sort(bys=["datetime desc"]).top(1)
             .toDF()
         )
 
         df_count: pd.DataFrame = (
             table.select("count(*)")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .toDF()
         )
 
@@ -221,9 +221,9 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = (
             table.select("*")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .where(f"datetime>={start}")
             .where(f"datetime<={end}")
             .toDF()
@@ -277,8 +277,8 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = (
             table.select("*")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
             .where(f"datetime>={start}")
             .where(f"datetime<={end}")
             .toDF()
@@ -350,9 +350,9 @@ class DolphindbDatabase(BaseDatabase):
         # 统计数据量
         df: pd.DataFrame = (
             table.select("count(*)")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .toDF()
         )
         count = df["count"][0]
@@ -360,9 +360,9 @@ class DolphindbDatabase(BaseDatabase):
         # 删除K线数据
         (
             table.delete()
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .execute()
         )
 
@@ -370,9 +370,9 @@ class DolphindbDatabase(BaseDatabase):
         table = self.session.loadTable(tableName="overview", dbPath=self.db_path)
         (
             table.delete()
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
-            .where(f"interval='{interval.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
+            .where(f"interval=`{interval.value}")
             .execute()
         )
 
@@ -390,8 +390,8 @@ class DolphindbDatabase(BaseDatabase):
         # 统计数据量
         df: pd.DataFrame = (
             table.select("count(*)")
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
             .toDF()
         )
         count: int = df["count"][0]
@@ -399,8 +399,8 @@ class DolphindbDatabase(BaseDatabase):
         # 删除Tick数据
         (
             table.delete()
-            .where(f"symbol='{symbol}'")
-            .where(f"exchange='{exchange.value}'")
+            .where(f"symbol=`{symbol}")
+            .where(f"exchange=`{exchange.value}")
             .execute()
         )
 
