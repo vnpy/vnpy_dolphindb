@@ -51,7 +51,7 @@ class DolphindbDatabase(BaseDatabase):
             self.session.run(CREATE_BAROVERVIEW_TABLE_SCRIPT)
             self.session.run(CREATE_TICKOVERVIEW_TABLE_SCRIPT)
 
-    def save_bar_data(self, bars: List[BarData]) -> bool:
+    def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
         """保存k线数据"""
         # 读取主键参数
         bar: BarData = bars[0]
@@ -100,6 +100,10 @@ class DolphindbDatabase(BaseDatabase):
             start: datetime = np.datetime64(bars[0].datetime)
             end: datetime = np.datetime64(bars[-1].datetime)
             count: int = len(bars)
+        elif stream:
+            start: datetime = overview["start"][0]
+            end: datetime = np.datetime64(bars[-1].datetime)
+            count: int = overview["count"][0] + len(bars)
         else:
             start: datetime = min(np.datetime64(bars[0].datetime), overview["start"][0])
             end: datetime = max(np.datetime64(bars[-1].datetime), overview["end"][0])
@@ -139,7 +143,7 @@ class DolphindbDatabase(BaseDatabase):
 
         return True
 
-    def save_tick_data(self, ticks: List[TickData]) -> bool:
+    def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 读取主键参数
         tick: BarData = ticks[0]
@@ -217,6 +221,10 @@ class DolphindbDatabase(BaseDatabase):
             start: datetime = np.datetime64(ticks[0].datetime)
             end: datetime = np.datetime64(ticks[-1].datetime)
             count: int = len(ticks)
+        elif stream:
+            start: datetime = overview["start"][0]
+            end: datetime = np.datetime64(ticks[-1].datetime)
+            count: int = overview["count"][0] + len(ticks)
         else:
             start: datetime = min(np.datetime64(ticks[0].datetime), overview["start"][0])
             end: datetime = max(np.datetime64(ticks[-1].datetime), overview["end"][0])
