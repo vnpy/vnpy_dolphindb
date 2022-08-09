@@ -52,19 +52,33 @@ db.createPartitionedTable(
     keepDuplicates=LAST)
 """
 
-# 创建overview表
-CREATE_OVERVIEW_TABLE_SCRIPT = """
+# 创建bar_overview表
+CREATE_BAROVERVIEW_TABLE_SCRIPT = """
 dataPath = "dfs://vnpy"
 db = database(dataPath)
 
 overview_columns = ["symbol", "exchange", "interval", "count", "start", "end", "datetime"]
 overview_type = [SYMBOL, SYMBOL, SYMBOL, INT, NANOTIMESTAMP, NANOTIMESTAMP, NANOTIMESTAMP]
-overview = table(1:0, overview_columns, overview_type)
-
+baroverview = table(1:0, overview_columns, overview_type)
 db.createPartitionedTable(
-    overview,
-    "overview",
+    baroverview,
+    "baroverview",
     partitionColumns=["datetime"],
     sortColumns=["symbol", "exchange", "interval", "datetime"],
+    keepDuplicates=LAST)
+"""
+
+# 创建tick_overview表
+CREATE_TICKOVERVIEW_TABLE_SCRIPT = """
+dataPath = "dfs://vnpy"
+db = database(dataPath)
+overview_columns = ["symbol", "exchange", "count", "start", "end", "datetime"]
+overview_type = [SYMBOL, SYMBOL, INT, NANOTIMESTAMP, NANOTIMESTAMP, NANOTIMESTAMP]
+tickoverview = table(1:0, overview_columns, overview_type)
+db.createPartitionedTable(
+    tickoverview,
+    "tickoverview",
+    partitionColumns=["datetime"],
+    sortColumns=["symbol", "exchange", "datetime"],
     keepDuplicates=LAST)
 """
