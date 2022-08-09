@@ -87,37 +87,34 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(df)
 
         # 计算已有K线数据的汇总
-        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
-
-        df_start: pd.DataFrame = (
-            table.select('*')
-            .where(f'symbol="{symbol}"')
-            .where(f'exchange="{exchange.value}"')
-            .where(f'interval="{interval.value}"')
-            .sort(bys=["datetime"]).top(1)
-            .toDF()
-        )
-
-        df_end: pd.DataFrame = (
-            table.select('*')
-            .where(f'symbol="{symbol}"')
-            .where(f'exchange="{exchange.value}"')
-            .where(f'interval="{interval.value}"')
-            .sort(bys=["datetime desc"]).top(1)
-            .toDF()
-        )
-
-        df_count: pd.DataFrame = (
-            table.select('count(*)')
+        overview_table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
+        overview: pd.DataFrame = (
+            overview_table.select('*')
             .where(f'symbol="{symbol}"')
             .where(f'exchange="{exchange.value}"')
             .where(f'interval="{interval.value}"')
             .toDF()
         )
 
-        count: int = df_count["count"][0]
-        start: datetime = df_start["datetime"][0]
-        end: datetime = df_end["datetime"][0]
+        if overview.empty:
+            start: datetime = np.datetime64(bars[0].datetime)
+            end: datetime = np.datetime64(bars[-1].datetime)
+            count: int = len(bars)
+        else:
+            start: datetime = min(np.datetime64(bars[0].datetime), overview["start"][0])
+            end: datetime = max(np.datetime64(bars[-1].datetime), overview["end"][0])
+
+            bar_table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+
+            df_count: pd.DataFrame = (
+                bar_table.select('count(*)')
+                .where(f'symbol="{symbol}"')
+                .where(f'exchange="{exchange.value}"')
+                .where(f'interval="{interval.value}"')
+                .toDF()
+            )
+
+            count: int = df_count["count"][0]
 
         # 更新K线汇总数据
         data: List[dict] = []
@@ -208,34 +205,32 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(df)
 
         # 计算已有Tick数据的汇总
-        table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
-
-        df_start: pd.DataFrame = (
-            table.select('*')
-            .where(f'symbol="{symbol}"')
-            .where(f'exchange="{exchange.value}"')
-            .sort(bys=["datetime"]).top(1)
-            .toDF()
-        )
-
-        df_end: pd.DataFrame = (
-            table.select('*')
-            .where(f'symbol="{symbol}"')
-            .where(f'exchange="{exchange.value}"')
-            .sort(bys=["datetime desc"]).top(1)
-            .toDF()
-        )
-
-        df_count: pd.DataFrame = (
-            table.select('count(*)')
+        overview_table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
+        overview: pd.DataFrame = (
+            overview_table.select('*')
             .where(f'symbol="{symbol}"')
             .where(f'exchange="{exchange.value}"')
             .toDF()
         )
 
-        count: int = df_count["count"][0]
-        start: datetime = df_start["datetime"][0]
-        end: datetime = df_end["datetime"][0]
+        if overview.empty:
+            start: datetime = np.datetime64(ticks[0].datetime)
+            end: datetime = np.datetime64(ticks[-1].datetime)
+            count: int = len(ticks)
+        else:
+            start: datetime = min(np.datetime64(ticks[0].datetime), overview["start"][0])
+            end: datetime = max(np.datetime64(ticks[-1].datetime), overview["end"][0])
+
+            bar_table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+
+            df_count: pd.DataFrame = (
+                bar_table.select('count(*)')
+                .where(f'symbol="{symbol}"')
+                .where(f'exchange="{exchange.value}"')
+                .toDF()
+            )
+
+            count: int = df_count["count"][0]
 
         # 更新Tick汇总数据
         data: List[dict] = []
