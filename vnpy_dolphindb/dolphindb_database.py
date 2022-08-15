@@ -294,7 +294,7 @@ class DolphindbDatabase(BaseDatabase):
             return []
 
         df.set_index("datetime", inplace=True)
-        df = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ.key)
 
         # 转换为BarData格式
         bars: List[BarData] = []
@@ -349,7 +349,7 @@ class DolphindbDatabase(BaseDatabase):
             return []
 
         df.set_index("datetime", inplace=True)
-        df = df.tz_localize(DB_TZ)
+        df = df.tz_localize(DB_TZ.key)
 
         # 转换为TickData格式
         ticks: List[TickData] = []
