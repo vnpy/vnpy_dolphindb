@@ -1,13 +1,13 @@
-# vn.py框架的DolphinDB数据库接口
+# VeighNa框架的DolphinDB数据库接口
 
 <p align="center">
   <img src ="https://vnpy.oss-cn-shanghai.aliyuncs.com/vnpy-logo.png"/>
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-1.0.6-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-1.0.7-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-linux|windows-yellow.svg"/>
-    <img src ="https://img.shields.io/badge/python-3.7-blue.svg" />
+    <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg" />
 </p>
 
 ## 说明
