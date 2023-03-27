@@ -29,7 +29,7 @@ class DolphindbDatabase(BaseDatabase):
     """DolphinDB数据库接口"""
 
     def __init__(self) -> None:
-        """"""
+        """构造函数"""
         self.user: str = SETTINGS["database.user"]
         self.password: str = SETTINGS["database.password"]
         self.host: str = SETTINGS["database.host"]
@@ -50,6 +50,11 @@ class DolphindbDatabase(BaseDatabase):
             self.session.run(CREATE_TICK_TABLE_SCRIPT)
             self.session.run(CREATE_BAROVERVIEW_TABLE_SCRIPT)
             self.session.run(CREATE_TICKOVERVIEW_TABLE_SCRIPT)
+
+    def __del__(self) -> None:
+        """析构函数"""
+        if not self.session.isClosed():
+            self.session.close()
 
     def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
         """保存k线数据"""
