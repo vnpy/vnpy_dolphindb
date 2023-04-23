@@ -33,7 +33,7 @@ class DolphindbDatabase(BaseDatabase):
         self.password: str = SETTINGS["database.password"]
         self.host: str = SETTINGS["database.host"]
         self.port: int = SETTINGS["database.port"]
-        self.db_path: str = "dfs://vnpy"
+        self.db_path: str = "dfs://" + SETTINGS["database.database"]
 
         # 连接数据库
         self.session: ddb.session = ddb.session()

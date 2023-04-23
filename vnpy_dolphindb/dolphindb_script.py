@@ -2,15 +2,21 @@
 DolphinDB脚本，用于在DolphinDB中创建数据库和数据表。
 """
 
+from vnpy.trader.setting import SETTINGS
+
+
+DB_PATH = "dfs://" + SETTINGS["database.database"]
+
+
 # 创建数据库
-CREATE_DATABASE_SCRIPT = """
-dataPath = "dfs://vnpy"
+CREATE_DATABASE_SCRIPT = f"""
+dataPath = "{DB_PATH}"
 db = database(dataPath, VALUE, 2000.01M..2030.12M, engine=`TSDB)
 """
 
 # 创建bar表
-CREATE_BAR_TABLE_SCRIPT = """
-dataPath = "dfs://vnpy"
+CREATE_BAR_TABLE_SCRIPT = f"""
+dataPath = "{DB_PATH}"
 db = database(dataPath)
 
 bar_columns = ["symbol", "exchange", "datetime", "interval", "volume", "turnover", "open_interest", "open_price", "high_price", "low_price", "close_price"]
@@ -26,8 +32,8 @@ db.createPartitionedTable(
 """
 
 # 创建tick表
-CREATE_TICK_TABLE_SCRIPT = """
-dataPath = "dfs://vnpy"
+CREATE_TICK_TABLE_SCRIPT = f"""
+dataPath = "{DB_PATH}"
 db = database(dataPath)
 
 tick_columns = ["symbol", "exchange", "datetime", "name", "volume", "turnover", "open_interest", "last_price", "last_volume", "limit_up", "limit_down",
@@ -53,8 +59,8 @@ db.createPartitionedTable(
 """
 
 # 创建bar_overview表
-CREATE_BAROVERVIEW_TABLE_SCRIPT = """
-dataPath = "dfs://vnpy"
+CREATE_BAROVERVIEW_TABLE_SCRIPT = f"""
+dataPath = "{DB_PATH}"
 db = database(dataPath)
 
 overview_columns = ["symbol", "exchange", "interval", "count", "start", "end", "datetime"]
@@ -69,8 +75,8 @@ db.createPartitionedTable(
 """
 
 # 创建tick_overview表
-CREATE_TICKOVERVIEW_TABLE_SCRIPT = """
-dataPath = "dfs://vnpy"
+CREATE_TICKOVERVIEW_TABLE_SCRIPT = f"""
+dataPath = "{DB_PATH}"
 db = database(dataPath)
 overview_columns = ["symbol", "exchange", "count", "start", "end", "datetime"]
 overview_type = [SYMBOL, SYMBOL, INT, NANOTIMESTAMP, NANOTIMESTAMP, NANOTIMESTAMP]
