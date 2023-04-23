@@ -1,4 +1,3 @@
-from typing import Dict, List
 from datetime import datetime
 
 import numpy as np
@@ -37,11 +36,11 @@ class DolphindbDatabase(BaseDatabase):
         self.db_path: str = "dfs://vnpy"
 
         # 连接数据库
-        self.session = ddb.session()
+        self.session: ddb.session = ddb.session()
         self.session.connect(self.host, self.port, self.user, self.password)
 
         # 创建连接池（用于数据写入）
-        self.pool = ddb.DBConnectionPool(self.host, self.port, 1, self.user, self.password)
+        self.pool: ddb.DBConnectionPool = ddb.DBConnectionPool(self.host, self.port, 1, self.user, self.password)
 
         # 初始化数据库和数据表
         if not self.session.existsDatabase(self.db_path):
@@ -56,7 +55,7 @@ class DolphindbDatabase(BaseDatabase):
         if not self.session.isClosed():
             self.session.close()
 
-    def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
+    def save_bar_data(self, bars: list[BarData], stream: bool = False) -> bool:
         """保存k线数据"""
         # 读取主键参数
         bar: BarData = bars[0]
@@ -65,12 +64,12 @@ class DolphindbDatabase(BaseDatabase):
         interval: Interval = bar.interval
 
         # 转换为DatFrame写入数据库
-        data: List[dict] = []
+        data: list[dict] = []
 
         for bar in bars:
-            dt = np.datetime64(convert_tz(bar.datetime))
+            dt: np.datetime64 = np.datetime64(convert_tz(bar.datetime))
 
-            d = {
+            d: dict = {
                 "symbol": symbol,
                 "exchange": exchange.value,
                 "datetime": dt,
@@ -88,7 +87,7 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.db_path, "bar", "datetime", self.pool)
+        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "bar", "datetime", self.pool)
         appender.append(df)
 
         # 计算已有K线数据的汇总
@@ -126,11 +125,11 @@ class DolphindbDatabase(BaseDatabase):
             count: int = df_count["count"][0]
 
         # 更新K线汇总数据
-        data: List[dict] = []
+        data: list[dict] = []
 
-        dt = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
+        dt: np.datetime64 = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
 
-        d: Dict = {
+        d: dict = {
             "symbol": symbol,
             "exchange": exchange.value,
             "interval": interval.value,
@@ -143,24 +142,24 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.db_path, "baroverview", "datetime", self.pool)
+        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "baroverview", "datetime", self.pool)
         appender.append(df)
 
         return True
 
-    def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
+    def save_tick_data(self, ticks: list[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 读取主键参数
         tick: BarData = ticks[0]
         symbol: str = tick.symbol
         exchange: Exchange = tick.exchange
 
-        data: List[dict] = []
+        data: list[dict] = []
 
         for tick in ticks:
-            dt = np.datetime64(convert_tz(tick.datetime))
+            dt: np.datetime64 = np.datetime64(convert_tz(tick.datetime))
 
-            d: Dict = {
+            d: dict = {
                 "symbol": tick.symbol,
                 "exchange": tick.exchange.value,
                 "datetime": dt,
@@ -210,7 +209,7 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.db_path, "tick", "datetime", self.pool)
+        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "tick", "datetime", self.pool)
         appender.append(df)
 
         # 计算已有Tick数据的汇总
@@ -246,11 +245,11 @@ class DolphindbDatabase(BaseDatabase):
             count: int = df_count["count"][0]
 
         # 更新Tick汇总数据
-        data: List[dict] = []
+        data: list[dict] = []
 
-        dt = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
+        dt: np.datetime64 = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
 
-        d: Dict = {
+        d: dict = {
             "symbol": symbol,
             "exchange": exchange.value,
             "count": count,
@@ -262,7 +261,7 @@ class DolphindbDatabase(BaseDatabase):
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
 
-        appender = ddb.PartitionedTableAppender(self.db_path, "tickoverview", "datetime", self.pool)
+        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "tickoverview", "datetime", self.pool)
         appender.append(df)
 
         return True
@@ -274,7 +273,7 @@ class DolphindbDatabase(BaseDatabase):
         interval: Interval,
         start: datetime,
         end: datetime
-    ) -> List[BarData]:
+    ) -> list[BarData]:
         """读取K线数据"""
         # 转换时间格式
         start = np.datetime64(start)
@@ -283,7 +282,7 @@ class DolphindbDatabase(BaseDatabase):
         end = np.datetime64(end)
         end: str = str(end).replace("-", ".")
 
-        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         df: pd.DataFrame = (
             table.select('*')
@@ -302,7 +301,7 @@ class DolphindbDatabase(BaseDatabase):
         df = df.tz_localize(DB_TZ.key)
 
         # 转换为BarData格式
-        bars: List[BarData] = []
+        bars: list[BarData] = []
 
         for tp in df.itertuples():
             bar = BarData(
@@ -329,7 +328,7 @@ class DolphindbDatabase(BaseDatabase):
         exchange: Exchange,
         start: datetime,
         end: datetime
-    ) -> List[TickData]:
+    ) -> list[TickData]:
         """读取Tick数据"""
         # 转换时间格式
         start = np.datetime64(start)
@@ -339,7 +338,7 @@ class DolphindbDatabase(BaseDatabase):
         end: str = str(end).replace("-", ".")
 
         # 读取数据DataFrame
-        table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
         df: pd.DataFrame = (
             table.select('*')
@@ -357,10 +356,10 @@ class DolphindbDatabase(BaseDatabase):
         df = df.tz_localize(DB_TZ.key)
 
         # 转换为TickData格式
-        ticks: List[TickData] = []
+        ticks: list[TickData] = []
 
         for tp in df.itertuples():
-            tick = TickData(
+            tick: TickData = TickData(
                 symbol=symbol,
                 exchange=exchange,
                 datetime=tp.Index.to_pydatetime(),
@@ -411,7 +410,7 @@ class DolphindbDatabase(BaseDatabase):
     ) -> int:
         """删除K线数据"""
         # 加载数据表
-        table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
         # 统计数据量
         df: pd.DataFrame = (
@@ -421,7 +420,7 @@ class DolphindbDatabase(BaseDatabase):
             .where(f'interval="{interval.value}"')
             .toDF()
         )
-        count = df["count"][0]
+        count: int = df["count"][0]
 
         # 删除K线数据
         (
@@ -433,7 +432,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         # 删除K线汇总
-        table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
         (
             table.delete()
             .where(f'symbol="{symbol}"')
@@ -451,7 +450,7 @@ class DolphindbDatabase(BaseDatabase):
     ) -> int:
         """删除Tick数据"""
         # 加载数据表
-        table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
         # 统计数据量
         df: pd.DataFrame = (
@@ -471,7 +470,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         # 删除Tick汇总
-        table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
         (
             table.delete()
             .where(f'symbol="{symbol}"')
@@ -481,15 +480,15 @@ class DolphindbDatabase(BaseDatabase):
 
         return count
 
-    def get_bar_overview(self) -> List[BarOverview]:
+    def get_bar_overview(self) -> list[BarOverview]:
         """"查询数据库中的K线汇总信息"""
-        table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
         df: pd.DataFrame = table.select('*').toDF()
 
-        overviews: List[BarOverview] = []
+        overviews: list[BarOverview] = []
 
         for tp in df.itertuples():
-            overview = BarOverview(
+            overview: BarOverview = BarOverview(
                 symbol=tp.symbol,
                 exchange=Exchange(tp.exchange),
                 interval=Interval(tp.interval),
@@ -501,15 +500,15 @@ class DolphindbDatabase(BaseDatabase):
 
         return overviews
 
-    def get_tick_overview(self) -> List[TickOverview]:
+    def get_tick_overview(self) -> list[TickOverview]:
         """"查询数据库中的K线汇总信息"""
-        table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
+        table: ddb.Table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
         df: pd.DataFrame = table.select('*').toDF()
 
-        overviews: List[TickOverview] = []
+        overviews: list[TickOverview] = []
 
         for tp in df.itertuples():
-            overview = TickOverview(
+            overview: TickOverview = TickOverview(
                 symbol=tp.symbol,
                 exchange=Exchange(tp.exchange),
                 count=tp.count,
