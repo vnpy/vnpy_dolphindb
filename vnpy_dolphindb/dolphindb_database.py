@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import dolphindb as ddb
+import gc
 
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.object import BarData, TickData
@@ -86,6 +87,8 @@ class DolphindbDatabase(BaseDatabase):
             data.append(d)
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
+        del data
+        gc.collect()
 
         appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "bar", "datetime", self.pool)
         appender.append(df)
@@ -100,17 +103,20 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
+        begin_dt: datetime = np.datetime64(convert_tz(bars[0].datetime))
+        end_dt: datetime = np.datetime64(convert_tz(bars[-1].datetime))
+
         if overview.empty:
-            start: datetime = np.datetime64(bars[0].datetime)
-            end: datetime = np.datetime64(bars[-1].datetime)
+            start: datetime = begin_dt
+            end: datetime = end_dt
             count: int = len(bars)
         elif stream:
             start: datetime = overview["start"][0]
-            end: datetime = np.datetime64(bars[-1].datetime)
+            end: datetime = end_dt
             count: int = overview["count"][0] + len(bars)
         else:
-            start: datetime = min(np.datetime64(bars[0].datetime), overview["start"][0])
-            end: datetime = max(np.datetime64(bars[-1].datetime), overview["end"][0])
+            start: datetime = min(begin_dt, overview["start"][0])
+            end: datetime = max(end_dt, overview["end"][0])
 
             bar_table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
@@ -150,7 +156,7 @@ class DolphindbDatabase(BaseDatabase):
     def save_tick_data(self, ticks: list[TickData], stream: bool = False) -> bool:
         """保存TICK数据"""
         # 读取主键参数
-        tick: BarData = ticks[0]
+        tick: TickData = ticks[0]
         symbol: str = tick.symbol
         exchange: Exchange = tick.exchange
 
@@ -208,6 +214,8 @@ class DolphindbDatabase(BaseDatabase):
             data.append(d)
 
         df: pd.DataFrame = pd.DataFrame.from_records(data)
+        del data
+        gc.collect()
 
         appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "tick", "datetime", self.pool)
         appender.append(df)
@@ -221,17 +229,20 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
+        begin_dt: datetime = np.datetime64(convert_tz(ticks[0].datetime))
+        end_dt: datetime = np.datetime64(convert_tz(ticks[-1].datetime))
+
         if overview.empty:
-            start: datetime = np.datetime64(ticks[0].datetime)
-            end: datetime = np.datetime64(ticks[-1].datetime)
+            start: datetime = begin_dt
+            end: datetime = end_dt
             count: int = len(ticks)
         elif stream:
             start: datetime = overview["start"][0]
-            end: datetime = np.datetime64(ticks[-1].datetime)
+            end: datetime = end_dt
             count: int = overview["count"][0] + len(ticks)
         else:
-            start: datetime = min(np.datetime64(ticks[0].datetime), overview["start"][0])
-            end: datetime = max(np.datetime64(ticks[-1].datetime), overview["end"][0])
+            start: datetime = min(begin_dt, overview["start"][0])
+            end: datetime = max(end_dt, overview["end"][0])
 
             bar_table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
