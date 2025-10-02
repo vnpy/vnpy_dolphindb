@@ -103,20 +103,20 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
-        begin_dt: datetime = np.datetime64(convert_tz(bars[0].datetime))
-        end_dt: datetime = np.datetime64(convert_tz(bars[-1].datetime))
+        begin_dt: np.datetime64 = np.datetime64(convert_tz(bars[0].datetime))
+        end_dt: np.datetime64 = np.datetime64(convert_tz(bars[-1].datetime))
 
         if overview.empty:
-            start: datetime = begin_dt
-            end: datetime = end_dt
+            start: datetime | np.datetime64 = begin_dt
+            end: datetime | np.datetime64 = end_dt
             count: int = len(bars)
         elif stream:
-            start: datetime = overview["start"][0]
-            end: datetime = end_dt
-            count: int = overview["count"][0] + len(bars)
+            start = overview["start"][0]
+            end = end_dt
+            count = overview["count"][0] + len(bars)
         else:
-            start: datetime = min(begin_dt, overview["start"][0])
-            end: datetime = max(end_dt, overview["end"][0])
+            start = min(begin_dt, overview["start"][0])
+            end = max(end_dt, overview["end"][0])
 
             bar_table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
@@ -128,14 +128,14 @@ class DolphindbDatabase(BaseDatabase):
                 .toDF()
             )
 
-            count: int = df_count["count"][0]
+            count = df_count["count"][0]
 
         # 更新K线汇总数据
-        data: list[dict] = []
+        data = []
 
-        dt: np.datetime64 = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
+        dt = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
 
-        d: dict = {
+        d = {
             "symbol": symbol,
             "exchange": exchange.value,
             "interval": interval.value,
@@ -146,9 +146,9 @@ class DolphindbDatabase(BaseDatabase):
         }
         data.append(d)
 
-        df: pd.DataFrame = pd.DataFrame.from_records(data)
+        df = pd.DataFrame.from_records(data)
 
-        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "baroverview", "datetime", self.pool)
+        appender = ddb.PartitionedTableAppender(self.db_path, "baroverview", "datetime", self.pool)
         appender.append(df)
 
         return True
@@ -229,20 +229,20 @@ class DolphindbDatabase(BaseDatabase):
             .toDF()
         )
 
-        begin_dt: datetime = np.datetime64(convert_tz(ticks[0].datetime))
-        end_dt: datetime = np.datetime64(convert_tz(ticks[-1].datetime))
+        begin_dt: np.datetime64 = np.datetime64(convert_tz(ticks[0].datetime))
+        end_dt: np.datetime64 = np.datetime64(convert_tz(ticks[-1].datetime))
 
         if overview.empty:
-            start: datetime = begin_dt
-            end: datetime = end_dt
+            start: datetime | np.datetime64 = begin_dt
+            end: datetime | np.datetime64 = end_dt
             count: int = len(ticks)
         elif stream:
-            start: datetime = overview["start"][0]
-            end: datetime = end_dt
-            count: int = overview["count"][0] + len(ticks)
+            start = overview["start"][0]
+            end = end_dt
+            count = overview["count"][0] + len(ticks)
         else:
-            start: datetime = min(begin_dt, overview["start"][0])
-            end: datetime = max(end_dt, overview["end"][0])
+            start = min(begin_dt, overview["start"][0])
+            end = max(end_dt, overview["end"][0])
 
             bar_table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
@@ -253,14 +253,14 @@ class DolphindbDatabase(BaseDatabase):
                 .toDF()
             )
 
-            count: int = df_count["count"][0]
+            count = df_count["count"][0]
 
         # 更新Tick汇总数据
-        data: list[dict] = []
+        data = []
 
-        dt: np.datetime64 = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
+        dt = np.datetime64(datetime(2022, 1, 1))    # 该时间戳仅用于分区
 
-        d: dict = {
+        d = {
             "symbol": symbol,
             "exchange": exchange.value,
             "count": count,
@@ -270,9 +270,9 @@ class DolphindbDatabase(BaseDatabase):
         }
         data.append(d)
 
-        df: pd.DataFrame = pd.DataFrame.from_records(data)
+        df = pd.DataFrame.from_records(data)
 
-        appender: ddb.PartitionedTableAppender = ddb.PartitionedTableAppender(self.db_path, "tickoverview", "datetime", self.pool)
+        appender = ddb.PartitionedTableAppender(self.db_path, "tickoverview", "datetime", self.pool)
         appender.append(df)
 
         return True
@@ -287,11 +287,11 @@ class DolphindbDatabase(BaseDatabase):
     ) -> list[BarData]:
         """读取K线数据"""
         # 转换时间格式
-        start = np.datetime64(start)
-        start: str = str(start).replace("-", ".")
+        _start: np.datetime64 = np.datetime64(start)
+        start_str: str = str(_start).replace("-", ".")
 
-        end = np.datetime64(end)
-        end: str = str(end).replace("-", ".")
+        _end: np.datetime64 = np.datetime64(end)
+        end_str: str = str(_end).replace("-", ".")
 
         table: ddb.Table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
@@ -300,8 +300,8 @@ class DolphindbDatabase(BaseDatabase):
             .where(f'symbol="{symbol}"')
             .where(f'exchange="{exchange.value}"')
             .where(f'interval="{interval.value}"')
-            .where(f'datetime>={start}')
-            .where(f'datetime<={end}')
+            .where(f'datetime>={start_str}')
+            .where(f'datetime<={end_str}')
             .toDF()
         )
 
@@ -342,11 +342,11 @@ class DolphindbDatabase(BaseDatabase):
     ) -> list[TickData]:
         """读取Tick数据"""
         # 转换时间格式
-        start = np.datetime64(start)
-        start: str = str(start).replace("-", ".")
+        _start: np.datetime64 = np.datetime64(start)
+        start_str: str = str(_start).replace("-", ".")
 
-        end = np.datetime64(end)
-        end: str = str(end).replace("-", ".")
+        _end: np.datetime64 = np.datetime64(end)
+        end_str: str = str(_end).replace("-", ".")
 
         # 读取数据DataFrame
         table: ddb.Table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
@@ -355,8 +355,8 @@ class DolphindbDatabase(BaseDatabase):
             table.select('*')
             .where(f'symbol="{symbol}"')
             .where(f'exchange="{exchange.value}"')
-            .where(f'datetime>={start}')
-            .where(f'datetime<={end}')
+            .where(f'datetime>={start_str}')
+            .where(f'datetime<={end_str}')
             .toDF()
         )
 
@@ -443,7 +443,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         # 删除K线汇总
-        table: ddb.Table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
         (
             table.delete()
             .where(f'symbol="{symbol}"')
@@ -481,7 +481,7 @@ class DolphindbDatabase(BaseDatabase):
         )
 
         # 删除Tick汇总
-        table: ddb.Table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
+        table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
         (
             table.delete()
             .where(f'symbol="{symbol}"')

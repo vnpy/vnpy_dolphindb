@@ -5,16 +5,16 @@
 </p>
 
 <p align="center">
-    <img src ="https://img.shields.io/badge/version-1.0.9-blueviolet.svg"/>
+    <img src ="https://img.shields.io/badge/version-1.1.0-blueviolet.svg"/>
     <img src ="https://img.shields.io/badge/platform-linux|windows-yellow.svg"/>
-    <img src ="https://img.shields.io/badge/python-3.10-blue.svg" />
+    <img src ="https://img.shields.io/badge/python-3.10|3.11|3.12-blue.svg" />
 </p>
 
 ## 说明
 
 基于dolphindb开发的DolphinDB数据库接口。
 
-**需要使用DolphinDB 2.0以上版本。**
+**需要使用DolphinDB 3.0以上版本。**
 
 ## 使用
 
