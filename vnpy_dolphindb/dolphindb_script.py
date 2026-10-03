@@ -1,6 +1,4 @@
-"""
-DolphinDB脚本，用于在DolphinDB中创建数据库和数据表。
-"""
+"""DolphinDB脚本，用于在DolphinDB中创建数据库和数据表。"""
 
 from vnpy.trader.setting import SETTINGS
 

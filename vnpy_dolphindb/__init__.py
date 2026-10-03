@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""DolphinDB数据库接口。"""
 
 from .dolphindb_database import DolphindbDatabase as Database
 

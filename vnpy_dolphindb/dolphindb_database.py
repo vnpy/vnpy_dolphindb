@@ -1,3 +1,5 @@
+"""DolphinDB的K线与Tick存储实现。"""
+
 from datetime import datetime
 
 import numpy as np
@@ -492,7 +494,7 @@ class DolphindbDatabase(BaseDatabase):
         return count
 
     def get_bar_overview(self) -> list[BarOverview]:
-        """"查询数据库中的K线汇总信息"""
+        """查询数据库中的K线汇总信息"""
         table: ddb.Table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
         df: pd.DataFrame = table.select('*').toDF()
 
@@ -512,7 +514,7 @@ class DolphindbDatabase(BaseDatabase):
         return overviews
 
     def get_tick_overview(self) -> list[TickOverview]:
-        """"查询数据库中的K线汇总信息"""
+        """查询数据库中的Tick汇总信息"""
         table: ddb.Table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
         df: pd.DataFrame = table.select('*').toDF()
 
