@@ -3,17 +3,17 @@
 from vnpy.trader.setting import SETTINGS
 
 
-DB_PATH = "dfs://" + SETTINGS["database.database"]
+DB_PATH: str = "dfs://" + SETTINGS["database.database"]
 
 
 # 创建数据库
-CREATE_DATABASE_SCRIPT = f"""
+CREATE_DATABASE_SCRIPT: str = f"""
 dataPath = "{DB_PATH}"
 db = database(dataPath, VALUE, 2000.01M..2030.12M, engine=`TSDB)
 """
 
 # 创建bar表
-CREATE_BAR_TABLE_SCRIPT = f"""
+CREATE_BAR_TABLE_SCRIPT: str = f"""
 dataPath = "{DB_PATH}"
 db = database(dataPath)
 
@@ -30,7 +30,7 @@ db.createPartitionedTable(
 """
 
 # 创建tick表
-CREATE_TICK_TABLE_SCRIPT = f"""
+CREATE_TICK_TABLE_SCRIPT: str = f"""
 dataPath = "{DB_PATH}"
 db = database(dataPath)
 
@@ -57,7 +57,7 @@ db.createPartitionedTable(
 """
 
 # 创建bar_overview表
-CREATE_BAROVERVIEW_TABLE_SCRIPT = f"""
+CREATE_BAROVERVIEW_TABLE_SCRIPT: str = f"""
 dataPath = "{DB_PATH}"
 db = database(dataPath)
 
@@ -73,7 +73,7 @@ db.createPartitionedTable(
 """
 
 # 创建tick_overview表
-CREATE_TICKOVERVIEW_TABLE_SCRIPT = f"""
+CREATE_TICKOVERVIEW_TABLE_SCRIPT: str = f"""
 dataPath = "{DB_PATH}"
 db = database(dataPath)
 overview_columns = ["symbol", "exchange", "count", "start", "end", "datetime"]

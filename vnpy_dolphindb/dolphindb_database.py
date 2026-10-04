@@ -1,7 +1,7 @@
 """DolphinDB的K线与Tick存储实现。"""
 
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -97,7 +97,7 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(df)
 
         # 计算已有K线数据的汇总
-        overview_table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
+        overview_table: ddb.Table = self.session.loadTable(tableName="baroverview", dbPath=self.db_path)
         overview: pd.DataFrame = (
             overview_table.select('*')
             .where(f'symbol="{symbol}"')
@@ -121,7 +121,7 @@ class DolphindbDatabase(BaseDatabase):
             start = min(begin_dt, overview["start"][0])
             end = max(end_dt, overview["end"][0])
 
-            bar_table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
+            bar_table: ddb.Table = self.session.loadTable(tableName="bar", dbPath=self.db_path)
 
             df_count: pd.DataFrame = (
                 bar_table.select('count(*)')
@@ -224,7 +224,7 @@ class DolphindbDatabase(BaseDatabase):
         appender.append(df)
 
         # 计算已有Tick数据的汇总
-        overview_table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
+        overview_table: ddb.Table = self.session.loadTable(tableName="tickoverview", dbPath=self.db_path)
         overview: pd.DataFrame = (
             overview_table.select('*')
             .where(f'symbol="{symbol}"')
@@ -247,7 +247,7 @@ class DolphindbDatabase(BaseDatabase):
             start = min(begin_dt, overview["start"][0])
             end = max(end_dt, overview["end"][0])
 
-            bar_table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
+            bar_table: ddb.Table = self.session.loadTable(tableName="tick", dbPath=self.db_path)
 
             df_count: pd.DataFrame = (
                 bar_table.select('count(*)')
@@ -317,8 +317,10 @@ class DolphindbDatabase(BaseDatabase):
         # 转换为BarData格式
         bars: list[BarData] = []
 
+        # itertuples 静态类型是 tuple，列字段无法命名
+        tp: Any
         for tp in df.itertuples():
-            bar = BarData(
+            bar: BarData = BarData(
                 symbol=symbol,
                 exchange=exchange,
                 datetime=_cell_timestamp(tp.Index).to_pydatetime(),
@@ -372,6 +374,8 @@ class DolphindbDatabase(BaseDatabase):
         # 转换为TickData格式
         ticks: list[TickData] = []
 
+        # itertuples 静态类型是 tuple，列字段无法命名
+        tp: Any
         for tp in df.itertuples():
             tick: TickData = TickData(
                 symbol=symbol,
@@ -501,6 +505,8 @@ class DolphindbDatabase(BaseDatabase):
 
         overviews: list[BarOverview] = []
 
+        # itertuples 静态类型是 tuple，列字段无法命名
+        tp: Any
         for tp in df.itertuples():
             overview: BarOverview = BarOverview(
                 symbol=_cell_str(tp.symbol),
@@ -521,6 +527,8 @@ class DolphindbDatabase(BaseDatabase):
 
         overviews: list[TickOverview] = []
 
+        # itertuples 静态类型是 tuple，列字段无法命名
+        tp: Any
         for tp in df.itertuples():
             overview: TickOverview = TickOverview(
                 symbol=_cell_str(tp.symbol),
