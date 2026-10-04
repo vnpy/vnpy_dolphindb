@@ -1,6 +1,7 @@
 """DolphinDB的K线与Tick存储实现。"""
 
 from datetime import datetime
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -64,7 +65,7 @@ class DolphindbDatabase(BaseDatabase):
         bar: BarData = bars[0]
         symbol: str = bar.symbol
         exchange: Exchange = bar.exchange
-        interval: Interval = bar.interval
+        interval: Interval = cast(Interval, bar.interval)
 
         # 转换为DatFrame写入数据库
         data: list[dict] = []
@@ -320,15 +321,15 @@ class DolphindbDatabase(BaseDatabase):
             bar = BarData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=tp.Index.to_pydatetime(),
+                datetime=_cell_timestamp(tp.Index).to_pydatetime(),
                 interval=interval,
-                volume=tp.volume,
-                turnover=tp.turnover,
-                open_interest=tp.open_interest,
-                open_price=tp.open_price,
-                high_price=tp.high_price,
-                low_price=tp.low_price,
-                close_price=tp.close_price,
+                volume=_cell_float(tp.volume),
+                turnover=_cell_float(tp.turnover),
+                open_interest=_cell_float(tp.open_interest),
+                open_price=_cell_float(tp.open_price),
+                high_price=_cell_float(tp.high_price),
+                low_price=_cell_float(tp.low_price),
+                close_price=_cell_float(tp.close_price),
                 gateway_name="DB"
             )
             bars.append(bar)
@@ -375,40 +376,40 @@ class DolphindbDatabase(BaseDatabase):
             tick: TickData = TickData(
                 symbol=symbol,
                 exchange=exchange,
-                datetime=tp.Index.to_pydatetime(),
-                name=tp.name,
-                volume=tp.volume,
-                turnover=tp.turnover,
-                open_interest=tp.open_interest,
-                last_price=tp.last_price,
-                last_volume=tp.last_volume,
-                limit_up=tp.limit_up,
-                limit_down=tp.limit_down,
-                open_price=tp.open_price,
-                high_price=tp.high_price,
-                low_price=tp.low_price,
-                pre_close=tp.pre_close,
-                bid_price_1=tp.bid_price_1,
-                bid_price_2=tp.bid_price_2,
-                bid_price_3=tp.bid_price_3,
-                bid_price_4=tp.bid_price_4,
-                bid_price_5=tp.bid_price_5,
-                ask_price_1=tp.ask_price_1,
-                ask_price_2=tp.ask_price_2,
-                ask_price_3=tp.ask_price_3,
-                ask_price_4=tp.ask_price_4,
-                ask_price_5=tp.ask_price_5,
-                bid_volume_1=tp.bid_volume_1,
-                bid_volume_2=tp.bid_volume_2,
-                bid_volume_3=tp.bid_volume_3,
-                bid_volume_4=tp.bid_volume_4,
-                bid_volume_5=tp.bid_volume_5,
-                ask_volume_1=tp.ask_volume_1,
-                ask_volume_2=tp.ask_volume_2,
-                ask_volume_3=tp.ask_volume_3,
-                ask_volume_4=tp.ask_volume_4,
-                ask_volume_5=tp.ask_volume_5,
-                localtime=tp.localtime,
+                datetime=_cell_timestamp(tp.Index).to_pydatetime(),
+                name=_cell_str(tp.name),
+                volume=_cell_float(tp.volume),
+                turnover=_cell_float(tp.turnover),
+                open_interest=_cell_float(tp.open_interest),
+                last_price=_cell_float(tp.last_price),
+                last_volume=_cell_float(tp.last_volume),
+                limit_up=_cell_float(tp.limit_up),
+                limit_down=_cell_float(tp.limit_down),
+                open_price=_cell_float(tp.open_price),
+                high_price=_cell_float(tp.high_price),
+                low_price=_cell_float(tp.low_price),
+                pre_close=_cell_float(tp.pre_close),
+                bid_price_1=_cell_float(tp.bid_price_1),
+                bid_price_2=_cell_float(tp.bid_price_2),
+                bid_price_3=_cell_float(tp.bid_price_3),
+                bid_price_4=_cell_float(tp.bid_price_4),
+                bid_price_5=_cell_float(tp.bid_price_5),
+                ask_price_1=_cell_float(tp.ask_price_1),
+                ask_price_2=_cell_float(tp.ask_price_2),
+                ask_price_3=_cell_float(tp.ask_price_3),
+                ask_price_4=_cell_float(tp.ask_price_4),
+                ask_price_5=_cell_float(tp.ask_price_5),
+                bid_volume_1=_cell_float(tp.bid_volume_1),
+                bid_volume_2=_cell_float(tp.bid_volume_2),
+                bid_volume_3=_cell_float(tp.bid_volume_3),
+                bid_volume_4=_cell_float(tp.bid_volume_4),
+                bid_volume_5=_cell_float(tp.bid_volume_5),
+                ask_volume_1=_cell_float(tp.ask_volume_1),
+                ask_volume_2=_cell_float(tp.ask_volume_2),
+                ask_volume_3=_cell_float(tp.ask_volume_3),
+                ask_volume_4=_cell_float(tp.ask_volume_4),
+                ask_volume_5=_cell_float(tp.ask_volume_5),
+                localtime=_cell_timestamp(tp.localtime),
                 gateway_name="DB"
             )
             ticks.append(tick)
@@ -502,12 +503,12 @@ class DolphindbDatabase(BaseDatabase):
 
         for tp in df.itertuples():
             overview: BarOverview = BarOverview(
-                symbol=tp.symbol,
+                symbol=_cell_str(tp.symbol),
                 exchange=Exchange(tp.exchange),
                 interval=Interval(tp.interval),
-                count=tp.count,
-                start=datetime.fromtimestamp(tp.start.to_pydatetime().timestamp(), DB_TZ),
-                end=datetime.fromtimestamp(tp.end.to_pydatetime().timestamp(), DB_TZ),
+                count=_cell_int(tp.count),
+                start=datetime.fromtimestamp(_cell_timestamp(tp.start).to_pydatetime().timestamp(), DB_TZ),
+                end=datetime.fromtimestamp(_cell_timestamp(tp.end).to_pydatetime().timestamp(), DB_TZ),
             )
             overviews.append(overview)
 
@@ -522,12 +523,32 @@ class DolphindbDatabase(BaseDatabase):
 
         for tp in df.itertuples():
             overview: TickOverview = TickOverview(
-                symbol=tp.symbol,
+                symbol=_cell_str(tp.symbol),
                 exchange=Exchange(tp.exchange),
-                count=tp.count,
-                start=datetime.fromtimestamp(tp.start.to_pydatetime().timestamp(), DB_TZ),
-                end=datetime.fromtimestamp(tp.end.to_pydatetime().timestamp(), DB_TZ),
+                count=_cell_int(tp.count),
+                start=datetime.fromtimestamp(_cell_timestamp(tp.start).to_pydatetime().timestamp(), DB_TZ),
+                end=datetime.fromtimestamp(_cell_timestamp(tp.end).to_pydatetime().timestamp(), DB_TZ),
             )
             overviews.append(overview)
 
         return overviews
+
+
+def _cell_float(value: object) -> float:
+    """把查询单元格收窄为 float。"""
+    return cast(float, value)
+
+
+def _cell_int(value: object) -> int:
+    """把查询单元格收窄为 int。"""
+    return cast(int, value)
+
+
+def _cell_str(value: object) -> str:
+    """把查询单元格收窄为 str。"""
+    return cast(str, value)
+
+
+def _cell_timestamp(value: object) -> pd.Timestamp:
+    """把查询单元格收窄为 pandas 时间戳。"""
+    return cast(pd.Timestamp, value)
