@@ -28,4 +28,4 @@ from .dolphindb_database import DolphindbDatabase as Database
 __all__ = ["Database"]
 
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
